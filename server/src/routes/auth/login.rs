@@ -3,6 +3,7 @@
 //! Handles user authentication with password verification
 //! and JWT token generation.
 
+use super::common::{create_auth_cookie, error_response};
 use api_types::auth::login::LoginRequest;
 use api_types::auth::register::LoginAndRegisterResponse;
 use axum::Json;
@@ -13,8 +14,6 @@ use axum::response::IntoResponse;
 use sqlx::PgPool;
 use sqlx::prelude::FromRow;
 use utils::hashing;
-
-use crate::routes::auth::register::error_response;
 
 #[derive(FromRow)]
 struct UserRecord {
@@ -123,28 +122,10 @@ pub async fn login(State(pool): State<PgPool>, Json(req): Json<LoginRequest>) ->
         }
     }
 
-    // Generate JWT token
-    let jwt_token = match utils::jwt::sign_jwt(user.id.to_string()) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to sign JWT for user.");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("An error occurred on our end: {}", e),
-            );
-        }
-    };
-
-    // Build cookie
-    let cookie = match utils::jwt::build_cookie(jwt_token) {
+    // Generate JWT token and cookie
+    let cookie = match create_auth_cookie(user.id) {
         Ok(c) => c,
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to build cookie for user.");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("An error occurred on our end: {}", e),
-            );
-        }
+        Err(resp) => return resp,
     };
 
     tracing::debug!("Setting session cookie for user.");

@@ -11,26 +11,7 @@ use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
 use utils::hashing;
-
-/// Creates an error response with the specified status code and message.
-///
-/// # Arguments
-///
-/// * `status` - The HTTP status code
-/// * `message` - The error message to return
-///
-/// # Returns
-///
-/// An Axum response with the error details in JSON format.
-#[inline(always)]
-pub(crate) fn error_response(status: StatusCode, message: String) -> axum::response::Response {
-    let resp = LoginAndRegisterResponse {
-        ok: false,
-        message,
-        id: None,
-    };
-    (status, Json(resp)).into_response()
-}
+use super::common::{error_response, create_auth_cookie};
 
 /// Handles user registration requests.
 ///
@@ -162,26 +143,9 @@ pub async fn register(
         }
     };
 
-    let jwt_token = match utils::jwt::sign_jwt(user.id.to_string()) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to sign JWT for new user.");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("An error occurred on our end: {}", e),
-            );
-        }
-    };
-
-    let cookie = match utils::jwt::build_cookie(jwt_token) {
+    let cookie = match create_auth_cookie(user.id) {
         Ok(c) => c,
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to build cookie for new user.");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("An error occurred on our end: {}", e),
-            );
-        }
+        Err(resp) => return resp,
     };
 
     tracing::debug!("Setting session cookie for new user.");
