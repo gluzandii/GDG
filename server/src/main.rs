@@ -35,9 +35,9 @@ async fn main() {
     let pool = setup_db().await;
 
     let app = Router::new()
-        .route("/health", get(health))
-        .route("/auth/register", post(register))
-        .route("/auth/login", post(login))
+        .route("/api/health", get(health))
+        .route("/api/auth/register", post(register))
+        .route("/api/auth/login", post(login))
         .with_state(pool);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {

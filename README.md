@@ -1,7 +1,7 @@
 ### `PORT`
 
 Defines the TCP port on which the server listens.
-The application will be accessible at:
+Defaults to 2607 is not specified.
 
 ### `DATABASE_URL`
 
