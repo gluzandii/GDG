@@ -14,6 +14,7 @@ pub struct RegisterRequest {
 pub struct RegisterResponse {
     pub ok: bool,
     pub message: String,
+    pub id: Option<i64>,
 }
 
 impl RegisterRequest {
@@ -25,13 +26,21 @@ impl RegisterRequest {
             return Err("Email format is invalid".into());
         }
 
-        let password = &self.password;
+        // NOTE: Rust's `regex` crate does NOT support look-around (no look-ahead / look-behind).
+        // So we validate password rules with simple character checks.
+        let password = self.password.as_str();
 
-        let password_re = Regex::new(r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).{6,}$").unwrap();
-        if !password_re.is_match(password) {
-            return Err(
-                "password must be at least 6 characters and contain upper, lower, and digit".into(),
-            );
+        if password.len() < 6 {
+            return Err("Password must be at least 6 characters".into());
+        }
+
+        let mut chars = password.chars();
+        let has_upper = chars.any(|c| c.is_ascii_uppercase());
+        let has_lower = chars.any(|c| c.is_ascii_lowercase());
+        let has_digit = chars.any(|c| c.is_ascii_digit());
+
+        if !(has_upper && has_lower && has_digit) {
+            return Err("Password must contain at least one uppercase letter, one lowercase letter, and one digit".into());
         }
 
         Ok(())

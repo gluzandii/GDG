@@ -1,3 +1,4 @@
+pub mod hashing;
 mod routes;
 
 use crate::routes::auth::register::api::register;
