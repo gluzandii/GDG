@@ -3,7 +3,7 @@
 //! Handles the creation of new user accounts with validation,
 //! password hashing, and JWT token generation.
 
-use api_types::auth::register::{RegisterRequest, RegisterResponse};
+use api_types::auth::register::{LoginAndRegisterResponse, RegisterRequest};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -24,7 +24,7 @@ use utils::hashing;
 /// An Axum response with the error details in JSON format.
 #[inline(always)]
 fn error_response(status: StatusCode, message: String) -> axum::response::Response {
-    let resp = RegisterResponse {
+    let resp = LoginAndRegisterResponse {
         ok: false,
         message,
         id: None,
@@ -186,7 +186,7 @@ pub async fn register(
 
     tracing::debug!("Setting session cookie for new user.");
 
-    let resp = RegisterResponse {
+    let resp = LoginAndRegisterResponse {
         ok: true,
         message: "User successfully created.".to_string(),
         id: Some(user.id),

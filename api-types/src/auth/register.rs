@@ -1,7 +1,8 @@
 //! User registration request and response types.
 
-use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+use crate::auth::EMAIL_REGEX;
 
 /// Request payload for user registration.
 ///
@@ -22,7 +23,7 @@ pub struct RegisterRequest {
 /// Indicates whether registration succeeded and provides relevant information.
 #[derive(Serialize)]
 #[cfg_attr(debug_assertions, derive(Debug))]
-pub struct RegisterResponse {
+pub struct LoginAndRegisterResponse {
     /// Whether the registration was successful.
     pub ok: bool,
     /// A human-readable message describing the result.
@@ -44,17 +45,7 @@ impl RegisterRequest {
     /// - `Ok(())` if all validation passes
     /// - `Err(String)` with a descriptive error message if validation fails
     pub fn validate(&self) -> Result<(), String> {
-        let email_re = Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$");
-
-        let email_re = match email_re {
-            Ok(re) => re,
-            Err(e) => {
-                tracing::debug!(error = ?e, "Regex compilation failed");
-                return Err("Failed to compile email regex".into());
-            }
-        };
-
-        if !email_re.is_match(&self.email) {
+        if !EMAIL_REGEX.is_match(&self.email) {
             tracing::debug!("Invalid email address");
             return Err("Email format is invalid".into());
         }
