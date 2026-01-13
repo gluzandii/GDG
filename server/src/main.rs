@@ -1,8 +1,3 @@
-//! # GDG Realtime Chat Server
-//!
-//! This is the main server application for the GDG realtime chat platform.
-//! It provides RESTful API endpoints for user authentication and real-time messaging.
-
 /// Route handlers for all API endpoints.
 mod routes;
 
@@ -14,13 +9,9 @@ use crate::routes::auth::register::register;
 use crate::setup::{init_logging, setup_db};
 use axum::routing::post;
 use axum::{Router, routing::get};
+use sqlx::PgPool;
 use std::env;
 
-/// Main entry point for the server application.
-///
-/// Initializes logging, loads environment variables (in debug mode),
-/// sets up the database connection pool, configures routes, and starts
-/// the HTTP server.
 #[tokio::main]
 async fn main() {
     init_logging();
@@ -32,13 +23,7 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
     let addr = format!("127.0.0.1:{}", port);
 
-    let pool = setup_db().await;
-
-    let app = Router::new()
-        .route("/api/health", get(health))
-        .route("/api/auth/register", post(register))
-        .route("/api/auth/login", post(login))
-        .with_state(pool);
+    let app = create_router(setup_db().await);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => listener,
@@ -58,13 +43,18 @@ async fn main() {
     }
 }
 
-/// Health check endpoint.
-///
-/// Returns a simple status message to verify the server is running.
-///
-/// # Returns
-///
-/// A static string "ok :)" indicating the server is healthy.
-async fn health() -> &'static str {
-    "ok :)"
+#[inline(always)]
+fn create_router(pool: PgPool) -> Router {
+    // Health check route
+    let health_routes = Router::new().route("/api/health", get(|| async { "ok :)" }));
+
+    // Authentication routes
+    let auth_routes = Router::new()
+        .route("/api/auth/register", post(register))
+        .route("/api/auth/login", post(login));
+
+    Router::new()
+        .merge(health_routes)
+        .merge(auth_routes)
+        .with_state(pool)
 }
