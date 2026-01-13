@@ -12,6 +12,6 @@ use serde_json::json;
 ///
 /// An Axum response with the error details in JSON format.
 #[inline(always)]
-pub fn error_response(status: StatusCode, message: String) -> axum::response::Response {
-    (status, Json(json!({ "error": message }))).into_response()
+pub fn error_response<S: AsRef<str>>(status: StatusCode, message: S) -> axum::response::Response {
+    (status, Json(json!({ "error": message.as_ref() }))).into_response()
 }

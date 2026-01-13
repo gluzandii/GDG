@@ -1,22 +1,7 @@
+use api_types::users::me::UsersMeResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
-use serde::Serialize;
-use serde_json::json;
 use sqlx::PgPool;
-use time::OffsetDateTime;
-use utils::jwt::Claims;
-
-#[derive(Serialize)]
-struct UserProfile {
-    pub email: String,
-    pub username: String,
-    pub bio: Option<String>,
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
-}
-
-fn error_response<S: AsRef<str>>(status: StatusCode, message: S) -> axum::response::Response {
-    (status, Json(json!({ "error": message.as_ref() }))).into_response()
-}
+use utils::{errors::error_response, jwt::Claims};
 
 pub async fn me_route(
     Extension(claims): Extension<Claims>,
@@ -31,7 +16,7 @@ pub async fn me_route(
     };
 
     let user = match sqlx::query_as!(
-        UserProfile,
+        UsersMeResponse,
         r#"
         SELECT email, username, bio, created_at, updated_at
         FROM users

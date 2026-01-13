@@ -6,3 +6,6 @@
 
 /// Authentication-related API types and validation.
 pub mod auth;
+
+/// User-related API types and validation.
+pub mod users;
