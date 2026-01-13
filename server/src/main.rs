@@ -9,6 +9,7 @@ mod routes;
 /// Setup utilities for logging and database connections.
 mod setup;
 
+use crate::routes::auth::login::login;
 use crate::routes::auth::register::register;
 use crate::setup::{init_logging, setup_db};
 use axum::routing::post;
@@ -36,6 +37,7 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(health))
         .route("/auth/register", post(register))
+        .route("/auth/login", post(login))
         .with_state(pool);
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {

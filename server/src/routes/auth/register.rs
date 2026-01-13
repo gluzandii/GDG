@@ -23,7 +23,7 @@ use utils::hashing;
 ///
 /// An Axum response with the error details in JSON format.
 #[inline(always)]
-fn error_response(status: StatusCode, message: String) -> axum::response::Response {
+pub(crate) fn error_response(status: StatusCode, message: String) -> axum::response::Response {
     let resp = LoginAndRegisterResponse {
         ok: false,
         message,
@@ -69,7 +69,7 @@ pub async fn register(
     Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     if let Err(e) = req.validate() {
-        tracing::info!(error = ?e, "Validation failed");
+        tracing::error!(error = ?e, "Validation failed");
         return error_response(
             StatusCode::UNAUTHORIZED,
             format!("Your request was invalid: {}", e),
@@ -97,7 +97,7 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
-            tracing::debug!(error = ?e, "Failed to query existing users. Error occurred while querying database.");
+            tracing::error!(error = ?e, "Failed to query existing users. Error occurred while querying database.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("A database error occurred on our end: {}", e),
@@ -131,7 +131,7 @@ pub async fn register(
     let hashed = match hashing::hash_password(password) {
         Ok(h) => h,
         Err(e) => {
-            tracing::debug!(error = ?e, "Failed to hash password, for registering a user.");
+            tracing::error!(error = ?e, "Failed to hash password, for registering a user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("An error occurred on our end: {}", e),
@@ -154,7 +154,7 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
-            tracing::debug!(error = ?e, "Failed to insert new user.");
+            tracing::error!(error = ?e, "Failed to insert new user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("A database error occurred on our end: {}", e),
@@ -165,7 +165,7 @@ pub async fn register(
     let jwt_token = match utils::jwt::sign_jwt(user.id.to_string()) {
         Ok(token) => token,
         Err(e) => {
-            tracing::debug!(error = ?e, "Failed to sign JWT for new user.");
+            tracing::error!(error = ?e, "Failed to sign JWT for new user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("An error occurred on our end: {}", e),
@@ -176,7 +176,7 @@ pub async fn register(
     let cookie = match utils::jwt::build_cookie(jwt_token) {
         Ok(c) => c,
         Err(e) => {
-            tracing::debug!(error = ?e, "Failed to build cookie for new user.");
+            tracing::error!(error = ?e, "Failed to build cookie for new user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("An error occurred on our end: {}", e),

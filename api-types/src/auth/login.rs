@@ -11,7 +11,7 @@ use crate::auth::EMAIL_REGEX;
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct LoginRequest {
     /// The username or email address of the user.
-    pub username_or_email: String,
+    pub person: String,
     /// The password for authentication.
     pub password: String,
 
@@ -31,11 +31,11 @@ impl LoginRequest {
     /// - `Ok(())` if all validation passes
     /// - `Err(String)` with a descriptive error message if validation fails
     pub fn validate(&self) -> Result<(), String> {
-        if self.username_or_email.trim().is_empty() {
+        if self.person.trim().is_empty() {
             return Err("Username or email is required".to_string());
         }
 
-        if self.is_email && !EMAIL_REGEX.is_match(&self.username_or_email) {
+        if self.is_email && !EMAIL_REGEX.is_match(&self.person) {
             return Err("Invalid email format".to_string());
         }
         if self.password.is_empty() {
