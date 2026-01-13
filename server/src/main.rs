@@ -4,9 +4,12 @@ mod routes;
 /// Setup utilities for logging and database connections.
 mod setup;
 
-use crate::routes::auth::login::login;
-use crate::routes::auth::register::register;
+use crate::routes::auth::login::login_route;
+use crate::routes::auth::register::register_route;
+use crate::routes::users::me::me_route;
 use crate::setup::{init_logging, setup_db};
+use ::middleware::auth_middleware;
+use axum::middleware;
 use axum::routing::post;
 use axum::{Router, routing::get};
 use sqlx::PgPool;
@@ -50,11 +53,16 @@ fn create_router(pool: PgPool) -> Router {
 
     // Authentication routes
     let auth_routes = Router::new()
-        .route("/api/auth/register", post(register))
-        .route("/api/auth/login", post(login));
+        .route("/api/auth/register", post(register_route))
+        .route("/api/auth/login", post(login_route));
+
+    let users_routes = Router::new()
+        .route("/api/users/me", get(me_route))
+        .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
         .merge(health_routes)
         .merge(auth_routes)
+        .merge(users_routes)
         .with_state(pool)
 }

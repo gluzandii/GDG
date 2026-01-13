@@ -45,7 +45,7 @@ use utils::hashing;
 /// }
 /// ```
 #[tracing::instrument(skip(pool, req))]
-pub async fn register(
+pub async fn register_route(
     State(pool): State<PgPool>,
     Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {

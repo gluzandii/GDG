@@ -52,7 +52,10 @@ struct UserRecord {
 /// }
 /// ```
 #[tracing::instrument(skip(pool, req))]
-pub async fn login(State(pool): State<PgPool>, Json(req): Json<LoginRequest>) -> impl IntoResponse {
+pub async fn login_route(
+    State(pool): State<PgPool>,
+    Json(req): Json<LoginRequest>,
+) -> impl IntoResponse {
     if let Err(e) = req.validate() {
         tracing::info!(error = ?e, "Validation failed");
         return error_response(

@@ -4,3 +4,6 @@
 
 /// Authentication routes (registration, login, etc.).
 pub mod auth;
+
+/// User management routes (profile, settings, etc.).
+pub mod users;
