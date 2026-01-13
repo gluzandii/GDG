@@ -21,6 +21,7 @@ pub async fn register(
     Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     if let Err(e) = req.validate() {
+        tracing::info!(error = ?e, "Validation failed");
         return error_response(
             StatusCode::UNAUTHORIZED,
             format!("Your request was invalid: {}", e),
@@ -48,6 +49,7 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
+            tracing::debug!(error = ?e, "Failed to query existing users. Error occurred while querying database.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("A database error occurred on our end: {}", e),
@@ -56,21 +58,32 @@ pub async fn register(
     };
 
     if existing.username_exists && existing.email_exists {
+        tracing::debug!(
+            username,
+            email,
+            "Attempt to register with existing username and email",
+        );
+        tracing::info!("User registration failed: username and email already exist");
         return error_response(
             StatusCode::CONFLICT,
             "This user already exists.".to_string(),
         );
     }
     if existing.username_exists {
+        tracing::debug!(username, "Attempt to register with existing username",);
+        tracing::info!("User registration failed: username already exists");
         return error_response(StatusCode::CONFLICT, "Username already exists".to_string());
     }
     if existing.email_exists {
+        tracing::debug!(email, "Attempt to register with existing email",);
+        tracing::info!("User registration failed: email already exists");
         return error_response(StatusCode::CONFLICT, "Email already exists".to_string());
     }
 
     let hashed = match hashing::hash_password(password) {
         Ok(h) => h,
         Err(e) => {
+            tracing::debug!(error = ?e, "Failed to hash password, for registering a user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("An error occurred on our end: {}", e),
@@ -93,6 +106,7 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
+            tracing::debug!(error = ?e, "Failed to insert new user.");
             return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("A database error occurred on our end: {}", e),

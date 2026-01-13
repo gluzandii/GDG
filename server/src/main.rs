@@ -11,7 +11,9 @@ use std::env;
 async fn main() {
     init_logging();
     #[cfg(debug_assertions)]
-    dotenvy::dotenv().ok();
+    if let Err(_) = dotenvy::dotenv() {
+        tracing::warn!("Failed to load .env file. Continuing without it.");
+    }
 
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
     let addr = format!("127.0.0.1:{}", port);
@@ -23,10 +25,22 @@ async fn main() {
         .route("/auth/register", post(register))
         .with_state(pool);
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(listener) => listener,
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to bind to address {}. Exiting.", addr);
+            std::process::exit(1);
+        }
+    };
 
     println!("Listening on http://{}", addr);
-    axum::serve(listener, app).await.unwrap();
+    match axum::serve(listener, app).await {
+        Ok(_) => (),
+        Err(e) => {
+            tracing::error!(error = ?e, "Error while running the server. Exiting.");
+            std::process::exit(1);
+        }
+    }
 }
 
 async fn health() -> &'static str {

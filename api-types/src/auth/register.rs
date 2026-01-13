@@ -19,10 +19,18 @@ pub struct RegisterResponse {
 
 impl RegisterRequest {
     pub fn validate(&self) -> Result<(), String> {
-        let email_re = Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-            .expect("Regex failed to compile");
+        let email_re = Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$");
+
+        let email_re = match email_re {
+            Ok(re) => re,
+            Err(e) => {
+                tracing::debug!(error = ?e, "Regex compilation failed");
+                return Err("Failed to compile email regex".into());
+            }
+        };
 
         if !email_re.is_match(&self.email) {
+            tracing::debug!("Invalid email address");
             return Err("Email format is invalid".into());
         }
 
@@ -31,6 +39,7 @@ impl RegisterRequest {
         let password = self.password.as_str();
 
         if password.len() < 6 {
+            tracing::debug!("Password is too short");
             return Err("Password must be at least 6 characters".into());
         }
 
@@ -40,6 +49,7 @@ impl RegisterRequest {
         let has_digit = chars.any(|c| c.is_ascii_digit());
 
         if !(has_upper && has_lower && has_digit) {
+            tracing::debug!("Password does not meet complexity requirements");
             return Err("Password must contain at least one uppercase letter, one lowercase letter, and one digit".into());
         }
 

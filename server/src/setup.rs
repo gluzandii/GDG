@@ -9,8 +9,15 @@ pub(crate) async fn setup_db() -> Pool<Postgres> {
         .max_connections(5)
         .acquire_timeout(std::time::Duration::from_secs(5))
         .connect(&db_url)
-        .await
-        .expect("Failed to connect to Postgres");
+        .await;
+
+    let pool = match pool {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to connect to the database. Exiting.");
+            std::process::exit(1);
+        }
+    };
 
     pool
 }

@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "regex",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -1829,6 +1830,7 @@ dependencies = [
  "argon2",
  "password-hash",
  "rand_core 0.9.5",
+ "tracing",
 ]
 
 [[package]]
