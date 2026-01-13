@@ -1,28 +1,15 @@
 mod routes;
+mod setup;
 
 use crate::routes::auth::register::register;
+use crate::setup::{init_logging, setup_db};
 use axum::routing::post;
 use axum::{routing::get, Router};
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{Pool, Postgres};
 use std::env;
-
-#[inline(always)]
-async fn setup_db() -> Pool<Postgres> {
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(std::time::Duration::from_secs(5))
-        .connect(&db_url)
-        .await
-        .expect("Failed to connect to Postgres");
-
-    pool
-}
 
 #[tokio::main]
 async fn main() {
+    init_logging();
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 

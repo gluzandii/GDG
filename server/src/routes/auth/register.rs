@@ -6,18 +6,25 @@ use axum::Json;
 use sqlx::PgPool;
 use utils::hashing;
 
+#[inline(always)]
+fn error_response(status: StatusCode, message: String) -> axum::response::Response {
+    let resp = RegisterResponse {
+        ok: false,
+        message,
+        id: None,
+    };
+    (status, Json(resp)).into_response()
+}
+
 pub async fn register(
     State(pool): State<PgPool>,
     Json(req): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     if let Err(e) = req.validate() {
-        let resp = RegisterResponse {
-            ok: false,
-            message: e,
-            id: None,
-        };
-
-        return (StatusCode::BAD_REQUEST, Json(resp));
+        return error_response(
+            StatusCode::UNAUTHORIZED,
+            format!("Your request was invalid: {}", e),
+        );
     }
 
     let RegisterRequest {
@@ -41,49 +48,33 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
-            let resp = RegisterResponse {
-                ok: false,
-                message: format!("A database error occurred on our end: {}", e),
-                id: None,
-            };
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(resp));
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("A database error occurred on our end: {}", e),
+            );
         }
     };
 
     if existing.username_exists && existing.email_exists {
-        let resp = RegisterResponse {
-            ok: false,
-            message: "This user already exists.".to_string(),
-            id: None,
-        };
-        return (StatusCode::CONFLICT, Json(resp));
+        return error_response(
+            StatusCode::CONFLICT,
+            "This user already exists.".to_string(),
+        );
     }
     if existing.username_exists {
-        let resp = RegisterResponse {
-            ok: false,
-            message: "Username already exists".to_string(),
-            id: None,
-        };
-        return (StatusCode::CONFLICT, Json(resp));
+        return error_response(StatusCode::CONFLICT, "Username already exists".to_string());
     }
     if existing.email_exists {
-        let resp = RegisterResponse {
-            ok: false,
-            message: "Email already exists".to_string(),
-            id: None,
-        };
-        return (StatusCode::CONFLICT, Json(resp));
+        return error_response(StatusCode::CONFLICT, "Email already exists".to_string());
     }
 
     let hashed = match hashing::hash_password(password) {
         Ok(h) => h,
         Err(e) => {
-            let resp = RegisterResponse {
-                ok: false,
-                message: format!("An error occurred on our end: {}", e),
-                id: None,
-            };
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(resp));
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("An error occurred on our end: {}", e),
+            );
         }
     };
 
@@ -102,12 +93,10 @@ pub async fn register(
     {
         Ok(record) => record,
         Err(e) => {
-            let resp = RegisterResponse {
-                ok: false,
-                message: format!("A database error occurred on our end: {}", e),
-                id: None,
-            };
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(resp));
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("A database error occurred on our end: {}", e),
+            );
         }
     };
 
@@ -116,5 +105,5 @@ pub async fn register(
         message: "".to_string(),
         id: Some(user.id),
     };
-    (StatusCode::OK, Json(resp))
+    (StatusCode::CREATED, Json(resp)).into_response()
 }
