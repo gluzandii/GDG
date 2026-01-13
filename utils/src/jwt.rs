@@ -1,3 +1,6 @@
+use axum::http::header::InvalidHeaderValue;
+use axum::http::HeaderValue;
+use cookie::Cookie;
 use jsonwebtoken::{
     decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
@@ -60,4 +63,15 @@ pub fn verify_jwt<S: AsRef<str>>(token: S) -> Result<Claims, jsonwebtoken::error
 
     tracing::trace!("JWT verified");
     Ok(data.claims)
+}
+
+pub fn build_cookie<S: Into<String>>(value: S) -> Result<HeaderValue, InvalidHeaderValue> {
+    let cookie = Cookie::build(("session_token", value.into()))
+        .path("/")
+        .http_only(true)
+        .secure(false)
+        .same_site(cookie::SameSite::Lax)
+        .max_age(time::Duration::days(7))
+        .build();
+    cookie.to_string().parse()
 }

@@ -1,5 +1,6 @@
 use api_types::auth::register::{RegisterRequest, RegisterResponse};
 use axum::extract::State;
+use axum::http::header::SET_COOKIE;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
@@ -114,10 +115,37 @@ pub async fn register(
         }
     };
 
+    let jwt_token = match utils::jwt::sign_jwt(user.id.to_string()) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::debug!(error = ?e, "Failed to sign JWT for new user.");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("An error occurred on our end: {}", e),
+            );
+        }
+    };
+
+    let cookie = match utils::jwt::build_cookie(jwt_token) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::debug!(error = ?e, "Failed to build cookie for new user.");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("An error occurred on our end: {}", e),
+            );
+        }
+    };
+
+    tracing::debug!("Setting session cookie for new user.");
+
     let resp = RegisterResponse {
         ok: true,
-        message: "".to_string(),
+        message: "User successfully created.".to_string(),
         id: Some(user.id),
     };
-    (StatusCode::CREATED, Json(resp)).into_response()
+    let mut resp = (StatusCode::CREATED, Json(resp)).into_response();
+    resp.headers_mut().insert(SET_COOKIE, cookie);
+
+    resp
 }
