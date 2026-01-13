@@ -23,6 +23,7 @@ use std::env;
 /// Panics if:
 /// - The `DATABASE_URL` environment variable is not set
 /// - The connection to the database fails (logs error and exits with code 1)
+#[tracing::instrument]
 pub(crate) async fn setup_db() -> Pool<Postgres> {
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 

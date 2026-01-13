@@ -4,11 +4,11 @@
 //! password hashing, and JWT token generation.
 
 use api_types::auth::register::{RegisterRequest, RegisterResponse};
-use axum::extract::State;
-use axum::http::header::SET_COOKIE;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use axum::Json;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::http::header::SET_COOKIE;
+use axum::response::IntoResponse;
 use sqlx::PgPool;
 use utils::hashing;
 
@@ -63,6 +63,7 @@ fn error_response(status: StatusCode, message: String) -> axum::response::Respon
 ///   "password": "SecurePass123"
 /// }
 /// ```
+#[tracing::instrument(skip(pool, req))]
 pub async fn register(
     State(pool): State<PgPool>,
     Json(req): Json<RegisterRequest>,
