@@ -1,19 +1,36 @@
-use axum::http::header::InvalidHeaderValue;
+//! JWT token generation and verification.
+//!
+//! This module provides utilities for creating and verifying JWT tokens,
+//! as well as building secure HTTP cookies for session management.
+
 use axum::http::HeaderValue;
+use axum::http::header::InvalidHeaderValue;
 use cookie::Cookie;
 use jsonwebtoken::{
-    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, get_current_timestamp,
 };
 use serde::{Deserialize, Serialize};
 use std::env;
 
+/// JWT claims structure.
+///
+/// Contains the standard JWT claims for authentication tokens.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    /// Subject (user ID)
     pub sub: String,
+    /// Issued at time (Unix timestamp)
     pub iat: usize,
+    /// Expiration time (Unix timestamp)
     pub exp: usize,
 }
 
+/// Retrieves the JWT secret key from environment variables.
+///
+/// # Returns
+///
+/// - `Ok(String)` containing the secret key
+/// - `Err(jsonwebtoken::errors::Error)` if the `JWT_SECRET_KEY` environment variable is not set
 fn get_secret_key() -> Result<String, jsonwebtoken::errors::Error> {
     match env::var("JWT_SECRET_KEY") {
         Ok(val) => Ok(val),
@@ -26,6 +43,24 @@ fn get_secret_key() -> Result<String, jsonwebtoken::errors::Error> {
     }
 }
 
+/// Creates a signed JWT token for a user.
+///
+/// The token is valid for 7 days and uses the HS256 algorithm.
+///
+/// # Arguments
+///
+/// * `user_id` - The user's unique identifier
+///
+/// # Returns
+///
+/// - `Ok(String)` containing the signed JWT token
+/// - `Err(jsonwebtoken::errors::Error)` if signing fails or the secret key is not set
+///
+/// # Example
+///
+/// ```ignore
+/// let token = sign_jwt("12345")?;
+/// ```
 pub fn sign_jwt<S: AsRef<str>>(user_id: S) -> Result<String, jsonwebtoken::errors::Error> {
     tracing::trace!("Signing JWT");
 
@@ -49,6 +84,23 @@ pub fn sign_jwt<S: AsRef<str>>(user_id: S) -> Result<String, jsonwebtoken::error
     )
 }
 
+/// Verifies and decodes a JWT token.
+///
+/// # Arguments
+///
+/// * `token` - The JWT token string to verify
+///
+/// # Returns
+///
+/// - `Ok(Claims)` containing the decoded claims if the token is valid
+/// - `Err(jsonwebtoken::errors::Error)` if verification fails, the token is expired, or the secret key is not set
+///
+/// # Example
+///
+/// ```ignore
+/// let claims = verify_jwt(&token)?;
+/// println!("User ID: {}", claims.sub);
+/// ```
 pub fn verify_jwt<S: AsRef<str>>(token: S) -> Result<Claims, jsonwebtoken::errors::Error> {
     tracing::trace!("Verifying JWT");
 
@@ -65,6 +117,30 @@ pub fn verify_jwt<S: AsRef<str>>(token: S) -> Result<Claims, jsonwebtoken::error
     Ok(data.claims)
 }
 
+/// Builds an HTTP cookie for session management.
+///
+/// Creates a secure HTTP-only cookie named `session_token` with the following properties:
+/// - Path: `/`
+/// - HTTP-only: true (not accessible via JavaScript)
+/// - Secure: false (set to true in production with HTTPS)
+/// - SameSite: Lax
+/// - Max-Age: 7 days
+///
+/// # Arguments
+///
+/// * `value` - The JWT token to store in the cookie
+///
+/// # Returns
+///
+/// - `Ok(HeaderValue)` containing the formatted cookie header
+/// - `Err(InvalidHeaderValue)` if the cookie string contains invalid characters
+///
+/// # Example
+///
+/// ```ignore
+/// let cookie = build_cookie(jwt_token)?;
+/// response.headers_mut().insert(SET_COOKIE, cookie);
+/// ```
 pub fn build_cookie<S: Into<String>>(value: S) -> Result<HeaderValue, InvalidHeaderValue> {
     let cookie = Cookie::build(("session_token", value.into()))
         .path("/")

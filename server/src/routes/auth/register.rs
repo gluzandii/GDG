@@ -1,3 +1,8 @@
+//! User registration endpoint handler.
+//!
+//! Handles the creation of new user accounts with validation,
+//! password hashing, and JWT token generation.
+
 use api_types::auth::register::{RegisterRequest, RegisterResponse};
 use axum::extract::State;
 use axum::http::header::SET_COOKIE;
@@ -7,6 +12,16 @@ use axum::Json;
 use sqlx::PgPool;
 use utils::hashing;
 
+/// Creates an error response with the specified status code and message.
+///
+/// # Arguments
+///
+/// * `status` - The HTTP status code
+/// * `message` - The error message to return
+///
+/// # Returns
+///
+/// An Axum response with the error details in JSON format.
 #[inline(always)]
 fn error_response(status: StatusCode, message: String) -> axum::response::Response {
     let resp = RegisterResponse {
@@ -17,6 +32,37 @@ fn error_response(status: StatusCode, message: String) -> axum::response::Respon
     (status, Json(resp)).into_response()
 }
 
+/// Handles user registration requests.
+///
+/// This endpoint:
+/// 1. Validates the registration request (email format, password complexity)
+/// 2. Checks if the username or email already exists
+/// 3. Hashes the password using Argon2
+/// 4. Inserts the new user into the database
+/// 5. Generates a JWT token for the new user
+/// 6. Sets a session cookie with the JWT token
+///
+/// # Arguments
+///
+/// * `pool` - The PostgreSQL connection pool
+/// * `req` - The registration request containing username, email, and password
+///
+/// # Returns
+///
+/// - `201 CREATED` with user details and session cookie on success
+/// - `401 UNAUTHORIZED` if validation fails
+/// - `409 CONFLICT` if username or email already exists
+/// - `500 INTERNAL SERVER ERROR` if any server-side operation fails
+///
+/// # Example Request
+///
+/// ```json
+/// {
+///   "username": "john_doe",
+///   "email": "john@example.com",
+///   "password": "SecurePass123"
+/// }
+/// ```
 pub async fn register(
     State(pool): State<PgPool>,
     Json(req): Json<RegisterRequest>,

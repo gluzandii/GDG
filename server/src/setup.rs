@@ -1,7 +1,28 @@
+//! Setup utilities for the server.
+//!
+//! This module contains initialization functions for database connections
+//! and logging configuration.
+
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::env;
 
+/// Sets up the PostgreSQL database connection pool.
+///
+/// Reads the `DATABASE_URL` environment variable and creates a connection pool
+/// with the following configuration:
+/// - Maximum connections: 5
+/// - Acquire timeout: 5 seconds
+///
+/// # Returns
+///
+/// A PostgreSQL connection pool.
+///
+/// # Panics
+///
+/// Panics if:
+/// - The `DATABASE_URL` environment variable is not set
+/// - The connection to the database fails (logs error and exits with code 1)
 pub(crate) async fn setup_db() -> Pool<Postgres> {
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
@@ -24,6 +45,13 @@ pub(crate) async fn setup_db() -> Pool<Postgres> {
 
 use tracing_subscriber::{filter::Targets, fmt, prelude::*};
 
+/// Initializes the tracing subscriber for application logging.
+///
+/// Configures logging with the following settings:
+/// - Debug level for the `server` target in debug builds, INFO in release builds
+/// - WARN level for `sqlx` and `tokio_util::compat` to reduce noise
+/// - Pretty formatting with timestamps, levels, targets, file locations, thread names, IDs, and line numbers
+/// - UTC time in RFC 3339 format
 pub(crate) fn init_logging() {
     let server_level = if cfg!(debug_assertions) {
         tracing::Level::DEBUG

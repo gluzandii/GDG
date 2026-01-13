@@ -1,23 +1,48 @@
+//! User registration request and response types.
+
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+/// Request payload for user registration.
+///
+/// Contains the username, email, and password for a new user account.
 #[derive(Deserialize)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct RegisterRequest {
+    /// The desired username for the new account.
     pub username: String,
+    /// The email address for the new account.
     pub email: String,
+    /// The password for the new account (will be hashed before storage).
     pub password: String,
 }
 
+/// Response payload for user registration.
+///
+/// Indicates whether registration succeeded and provides relevant information.
 #[derive(Serialize)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct RegisterResponse {
+    /// Whether the registration was successful.
     pub ok: bool,
+    /// A human-readable message describing the result.
     pub message: String,
+    /// The ID of the newly created user (only present if registration succeeded).
     pub id: Option<i64>,
 }
 
 impl RegisterRequest {
+    /// Validates the registration request.
+    ///
+    /// Checks that:
+    /// - The email is in a valid format
+    /// - The password is at least 6 characters long
+    /// - The password contains at least one uppercase letter, one lowercase letter, and one digit
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` if all validation passes
+    /// - `Err(String)` with a descriptive error message if validation fails
     pub fn validate(&self) -> Result<(), String> {
         let email_re = Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$");
 
