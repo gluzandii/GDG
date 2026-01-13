@@ -1,7 +1,6 @@
-pub mod hashing;
 mod routes;
 
-use crate::routes::auth::register::api::register;
+use crate::routes::auth::register::register;
 use axum::routing::post;
 use axum::{routing::get, Router};
 use sqlx::postgres::PgPoolOptions;
