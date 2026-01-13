@@ -15,7 +15,7 @@ use std::env;
 /// JWT claims structure.
 ///
 /// Contains the standard JWT claims for authentication tokens.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Claims {
     /// Subject (user ID)
     pub sub: String,
