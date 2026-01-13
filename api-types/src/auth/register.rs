@@ -16,6 +16,8 @@ pub struct RegisterRequest {
     pub email: String,
     /// The password for the new account (will be hashed before storage).
     pub password: String,
+    /// The user's bio.
+    pub bio: Option<String>,
 }
 
 /// Response payload for user registration.

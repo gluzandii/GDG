@@ -3,6 +3,7 @@
 //! Handles the creation of new user accounts with validation,
 //! password hashing, and JWT token generation.
 
+use super::common::{create_auth_cookie, error_response};
 use api_types::auth::register::{LoginAndRegisterResponse, RegisterRequest};
 use axum::Json;
 use axum::extract::State;
@@ -11,7 +12,6 @@ use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
 use utils::hashing;
-use super::common::{error_response, create_auth_cookie};
 
 /// Handles user registration requests.
 ///
@@ -61,6 +61,7 @@ pub async fn register(
         username,
         email,
         password,
+        bio,
     } = req;
 
     // Check if username or email already exists
@@ -122,13 +123,14 @@ pub async fn register(
 
     let user = match sqlx::query!(
         r#"
-        INSERT INTO users (username, email, password_hash)
-        VALUES ($1, $2, $3)
+        INSERT INTO users (username, email, password_hash, bio)
+        VALUES ($1, $2, $3, $4)
         RETURNING id
         "#,
         username,
         email,
-        hashed
+        hashed,
+        bio
     )
     .fetch_one(&pool)
     .await
