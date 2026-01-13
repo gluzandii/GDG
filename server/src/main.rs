@@ -5,6 +5,8 @@ use axum::{routing::get, Router};
 use std::env;
 use std::path::Path;
 
+use crate::routes::auth::register::api::register;
+
 #[cfg(debug_assertions)]
 fn load_env() {
     match dotenvy::dotenv() {
@@ -31,7 +33,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/auth/register", post(async || "todo"));
+        .route("/auth/register", post(register));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
