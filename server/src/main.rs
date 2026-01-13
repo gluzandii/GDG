@@ -1,3 +1,6 @@
+mod routes;
+
+use axum::routing::post;
 use axum::{routing::get, Router};
 use std::env;
 use std::path::Path;
@@ -26,7 +29,9 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
     let addr = format!("127.0.0.1:{}", port);
 
-    let app = Router::new().route("/health", get(health));
+    let app = Router::new()
+        .route("/health", get(health))
+        .route("/auth/register", post(async || "todo"));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
