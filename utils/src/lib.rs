@@ -8,3 +8,6 @@ pub mod hashing;
 
 /// JWT token generation, verification, and cookie building utilities.
 pub mod jwt;
+
+/// Error types and handling utilities.
+pub mod errors;

@@ -3,7 +3,7 @@
 //! Handles user authentication with password verification
 //! and JWT token generation.
 
-use super::common::{create_auth_cookie, error_response};
+use super::common::create_auth_cookie;
 use api_types::auth::login::LoginRequest;
 use api_types::auth::register::LoginAndRegisterResponse;
 use axum::Json;
@@ -13,6 +13,7 @@ use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
 use sqlx::prelude::FromRow;
+use utils::errors::error_response;
 use utils::hashing;
 
 #[derive(FromRow)]
