@@ -3,7 +3,6 @@
 //! Handles user authentication with password verification
 //! and JWT token generation.
 
-use super::common::create_auth_cookie;
 use api_types::auth::login::LoginRequest;
 use api_types::auth::register::LoginAndRegisterResponse;
 use axum::Json;
@@ -13,6 +12,7 @@ use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
 use sqlx::prelude::FromRow;
+use utils::cookies::create_auth_cookie;
 use utils::errors::error_response;
 use utils::hashing;
 
@@ -72,24 +72,16 @@ pub async fn login_route(
     } = req;
 
     // Query user based on whether it's email or username
-    let user = if is_email {
-        sqlx::query_as::<_, UserRecord>(
-            r#"
-            SELECT id, password_hash
-            FROM users
-            WHERE email = $1
-            "#,
-        )
-    } else {
-        sqlx::query_as::<_, UserRecord>(
-            r#"
-            SELECT id, password_hash
-            FROM users
-            WHERE username = $1
-            "#,
-        )
-    }
-    .bind(&person)
+    let user = sqlx::query_as!(
+        UserRecord,
+        r#"
+        SELECT id, password_hash
+        FROM users
+        WHERE (email = $1 AND $2) OR (username = $1 AND NOT $2)
+        "#,
+        person,
+        is_email,
+    )
     .fetch_optional(&pool)
     .await;
 

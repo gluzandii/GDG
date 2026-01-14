@@ -11,3 +11,6 @@ pub mod jwt;
 
 /// Error types and handling utilities.
 pub mod errors;
+
+/// Cookie management utilities.
+pub mod cookies;

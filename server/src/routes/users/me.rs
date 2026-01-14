@@ -2,7 +2,7 @@
 //!
 //! Handles fetching the authenticated user's profile information.
 
-use api_types::users::me::UsersMeResponse;
+use api_types::users::me::MeResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::{errors::error_response, jwt::Claims};
@@ -49,7 +49,7 @@ pub async fn me_route(
     };
 
     let user = match sqlx::query_as!(
-        UsersMeResponse,
+        MeResponse,
         r#"
         SELECT email, username, bio, created_at, updated_at
         FROM users

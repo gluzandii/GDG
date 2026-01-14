@@ -3,7 +3,6 @@
 //! Handles the creation of new user accounts with validation,
 //! password hashing, and JWT token generation.
 
-use super::common::create_auth_cookie;
 use api_types::auth::register::{LoginAndRegisterResponse, RegisterRequest};
 use axum::Json;
 use axum::extract::State;
@@ -11,6 +10,7 @@ use axum::http::StatusCode;
 use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
 use sqlx::PgPool;
+use utils::cookies::create_auth_cookie;
 use utils::errors::error_response;
 use utils::hashing;
 

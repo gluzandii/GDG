@@ -3,9 +3,6 @@
 //! This module provides utilities for creating and verifying JWT tokens,
 //! as well as building secure HTTP cookies for session management.
 
-use axum::http::HeaderValue;
-use axum::http::header::InvalidHeaderValue;
-use cookie::Cookie;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, get_current_timestamp,
 };
@@ -115,39 +112,4 @@ pub fn verify_jwt<S: AsRef<str>>(token: S) -> Result<Claims, jsonwebtoken::error
 
     tracing::trace!("JWT verified");
     Ok(data.claims)
-}
-
-/// Builds an HTTP cookie for session management.
-///
-/// Creates a secure HTTP-only cookie named `session_token` with the following properties:
-/// - Path: `/`
-/// - HTTP-only: true (not accessible via JavaScript)
-/// - Secure: false (set to true in production with HTTPS)
-/// - SameSite: Lax
-/// - Max-Age: 7 days
-///
-/// # Arguments
-///
-/// * `value` - The JWT token to store in the cookie
-///
-/// # Returns
-///
-/// - `Ok(HeaderValue)` containing the formatted cookie header
-/// - `Err(InvalidHeaderValue)` if the cookie string contains invalid characters
-///
-/// # Example
-///
-/// ```ignore
-/// let cookie = build_cookie(jwt_token)?;
-/// response.headers_mut().insert(SET_COOKIE, cookie);
-/// ```
-pub fn build_cookie<S: Into<String>>(value: S) -> Result<HeaderValue, InvalidHeaderValue> {
-    let cookie = Cookie::build(("session_token", value.into()))
-        .path("/")
-        .http_only(true)
-        .secure(false)
-        .same_site(cookie::SameSite::Lax)
-        .max_age(time::Duration::days(7))
-        .build();
-    cookie.to_string().parse()
 }
