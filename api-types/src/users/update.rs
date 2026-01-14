@@ -1,3 +1,5 @@
+use std::str;
+
 use serde::Deserialize;
 
 /// Request structure for updating user information.
@@ -13,5 +15,12 @@ pub struct UsersUpdateRequest {
     /// The user's optional biography/description.
     pub bio: Option<String>,
     /// Password for verification before sensitive operations.
-    pub password: Option<String>,
+    pub password: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct UsersUpdateResponse {
+    /// List of fields that were updated.
+    #[serde(rename = "updatedFields")]
+    pub updated_fields: Vec<String>,
 }

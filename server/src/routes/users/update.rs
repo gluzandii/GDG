@@ -1,7 +1,108 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use api_types::users::update::{UsersUpdateRequest, UsersUpdateResponse};
+use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
+use sqlx::PgPool;
+use utils::errors::error_response;
 
-pub async fn update_route() -> impl IntoResponse {
-    // Implementation for updating user profile goes here
-    // This is a placeholder response
-    StatusCode::NOT_IMPLEMENTED.into_response()
+#[derive(sqlx::FromRow)]
+struct UserUpdateFields {
+    email: String,
+    username: String,
+    bio: Option<String>,
+    password_hash: String,
+}
+
+#[tracing::instrument(skip(pool, user_id, payload))]
+pub async fn update_route(
+    State(pool): State<PgPool>,
+    Extension(user_id): Extension<i64>,
+    Json(payload): Json<UsersUpdateRequest>,
+) -> impl IntoResponse {
+    // Query the email username bio and password from the user id
+    let user = match sqlx::query_as!(
+        UserUpdateFields,
+        r#"
+        SELECT email, username, bio, password_hash
+        FROM users
+        WHERE id = $1
+        "#,
+        user_id
+    )
+    .fetch_optional(&pool)
+    .await
+    {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            tracing::warn!(user_id, "User not found during update");
+            return error_response(StatusCode::NOT_FOUND, "User not found");
+        }
+        Err(e) => {
+            tracing::error!(error = ?e, "Database error during user profile fetch");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error while querying",
+            );
+        }
+    };
+
+    let pswd = payload.password;
+    let hash_result = utils::hashing::verify_password(&pswd, &user.password_hash);
+
+    let verified = match hash_result {
+        Ok(valid) => valid,
+        Err(e) => {
+            tracing::error!(error = ?e, "An error occurred while verifying password");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error during password verification",
+            );
+        }
+    };
+
+    if !verified {
+        tracing::warn!("Password verification failed during profile update");
+        tracing::debug!(user_id, "Invalid password provided for profile update");
+        return error_response(StatusCode::UNAUTHORIZED, "Invalid password");
+    }
+
+    // Prepare update fields and track which ones changed
+    let new_email = payload.email.as_deref().unwrap_or(&user.email);
+    let new_username = payload.username.as_deref().unwrap_or(&user.username);
+    let new_bio = payload.bio.as_ref().or(user.bio.as_ref());
+
+    let mut updated_fields = vec![];
+
+    if payload.email.is_some() && payload.email.as_deref() != Some(user.email.as_str()) {
+        updated_fields.push("email".to_string());
+    }
+    if payload.username.is_some() && payload.username.as_deref() != Some(user.username.as_str()) {
+        updated_fields.push("username".to_string());
+    }
+    if payload.bio.is_some() && payload.bio != user.bio {
+        updated_fields.push("bio".to_string());
+    }
+
+    // Update the user in the database
+    match sqlx::query!(
+        r#"
+        UPDATE users
+        SET email = $1, username = $2, bio = $3, updated_at = NOW()
+        WHERE id = $4
+        "#,
+        new_email,
+        new_username,
+        new_bio,
+        user_id
+    )
+    .execute(&pool)
+    .await
+    {
+        Ok(_) => {
+            let response = UsersUpdateResponse { updated_fields };
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to update user");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to update user")
+        }
+    }
 }

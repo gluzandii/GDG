@@ -47,9 +47,13 @@ pub async fn auth_middleware(
         tracing::warn!(error = ?e, "JWT decode failed, unauthorized.");
         StatusCode::UNAUTHORIZED
     })?;
+    let uid = claims.sub.parse::<i64>().map_err(|e| {
+        tracing::warn!(error = ?e, "Invalid user ID in JWT claims cookie.");
+        StatusCode::BAD_REQUEST
+    })?;
 
     // Store claims in request extensions so handlers can access it
-    req.extensions_mut().insert(claims);
+    req.extensions_mut().insert(uid);
 
     tracing::debug!("Auth middleware passed");
     Ok(next.run(req).await)

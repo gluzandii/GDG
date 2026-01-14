@@ -15,6 +15,7 @@ pub struct AuthLoginRequest {
     pub password: String,
 
     /// Indicates whether the username_or_email field is an email address.
+    #[serde(rename = "isEmail")]
     pub is_email: bool,
 }
 

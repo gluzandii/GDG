@@ -5,7 +5,7 @@
 use api_types::users::me::UsersMeResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
-use utils::{errors::error_response, jwt::Claims};
+use utils::errors::error_response;
 
 /// Handles fetching the authenticated user's profile.
 ///
@@ -35,19 +35,11 @@ use utils::{errors::error_response, jwt::Claims};
 ///   "updated_at": "2026-01-14T10:30:00Z"
 /// }
 /// ```
-#[tracing::instrument(skip(pool, claims))]
+#[tracing::instrument(skip(pool, user_id))]
 pub async fn me_route(
-    Extension(claims): Extension<Claims>,
+    Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
-    let user_id = match claims.sub.parse::<i64>() {
-        Ok(id) => id,
-        Err(_) => {
-            tracing::error!(user_id = claims.sub, "Invalid user ID format");
-            return error_response(StatusCode::BAD_REQUEST, "Invalid user ID");
-        }
-    };
-
     let user = match sqlx::query_as!(
         UsersMeResponse,
         r#"
@@ -62,7 +54,7 @@ pub async fn me_route(
     {
         Ok(Some(user)) => user,
         Ok(None) => {
-            tracing::warn!(user_id = claims.sub, "User not found");
+            tracing::warn!(user_id, "User not found");
             return error_response(StatusCode::NOT_FOUND, "User not found");
         }
         Err(e) => {
