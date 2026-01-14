@@ -63,7 +63,7 @@ fn create_router(pool: PgPool) -> Router {
     let protected_users_routes = Router::new()
         .route("/api/users/me", get(me_route))
         .route("/api/users/update", patch(update_route))
-        .route("/api/users/update-password", post(update_password_route))
+        .route("/api/users/update-password", patch(update_password_route))
         .layer(middleware::from_fn(auth_middleware));
 
     // Protected chat routes (auth required)

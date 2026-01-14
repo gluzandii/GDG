@@ -37,8 +37,13 @@ pub async fn new_chat_route(
     // Insert the chat code into the database
     let result = sqlx::query!(
         r#"
+        WITH user_chat_count AS (
+            SELECT COUNT(*)::INT AS count FROM chat_codes WHERE user_id = $2
+        )
         INSERT INTO chat_codes (code, user_id)
-        VALUES ($1, $2)
+        SELECT $1, $2
+        FROM user_chat_count
+        WHERE user_chat_count.count < 5
         "#,
         code as i32,
         user_id
@@ -46,12 +51,21 @@ pub async fn new_chat_route(
     .execute(&pool)
     .await;
 
-    if let Err(e) = result {
-        tracing::error!(error = ?e, user_id, "Failed to create chat code");
-        return error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to create chat code".to_string(),
-        );
+    match result {
+        Ok(r) if r.rows_affected() == 1 => {}
+        Ok(_) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "You already have 5 chat codes.".to_string(),
+            );
+        }
+        Err(e) => {
+            tracing::error!(error = ?e, user_id, "Failed to create chat code");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create chat code".to_string(),
+            );
+        }
     }
 
     tracing::info!(user_id, code, "Chat code created successfully");
