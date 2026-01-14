@@ -7,10 +7,11 @@ mod setup;
 use crate::routes::auth::login::login_route;
 use crate::routes::auth::register::register_route;
 use crate::routes::users::me::me_route;
+use crate::routes::users::update::update_route;
 use crate::setup::{init_logging, setup_db};
 use ::middleware::auth_middleware;
 use axum::middleware;
-use axum::routing::post;
+use axum::routing::{patch, post};
 use axum::{Router, routing::get};
 use sqlx::PgPool;
 use std::env;
@@ -59,6 +60,7 @@ fn create_router(pool: PgPool) -> Router {
     // Protected user routes (auth required)
     let protected_users_routes = Router::new()
         .route("/api/users/me", get(me_route))
+        .route("/api/users/update", patch(update_route))
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
