@@ -7,7 +7,7 @@ mod setup;
 use crate::routes::auth::login::login_route;
 use crate::routes::auth::register::register_route;
 use crate::routes::chats::delete_code::delete_code_chat_route;
-use crate::routes::chats::new::new_chat_route;
+use crate::routes::chats::new_code::new_chat_route;
 use crate::routes::chats::submit_code::submit_code_chat_route;
 use crate::routes::users::me::me_route;
 use crate::routes::users::update::update_route;
@@ -70,7 +70,7 @@ fn create_router(pool: PgPool) -> Router {
 
     // Protected chat routes (auth required)
     let protected_chat_routes = Router::new()
-        .route("/api/chats/new", post(new_chat_route))
+        .route("/api/chats/new-code", post(new_chat_route))
         .route("/api/chats/delete-code", delete(delete_code_chat_route))
         .route("/api/chats/submit-code", post(submit_code_chat_route))
         .layer(middleware::from_fn(auth_middleware));

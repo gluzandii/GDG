@@ -2,7 +2,7 @@
 //!
 //! Handles creation of new chat conversations.
 
-use api_types::chats::new::CreateChatResponse;
+use api_types::chats::new_code::CreateChatResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
