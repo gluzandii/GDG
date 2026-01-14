@@ -65,6 +65,9 @@ pub async fn register_route(
         bio,
     } = req;
 
+    // Convert bio to empty string if None
+    let bio = bio.unwrap_or_default();
+
     // Check if username or email already exists
     let existing = match sqlx::query!(
         r#"
