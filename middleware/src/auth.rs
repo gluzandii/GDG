@@ -8,7 +8,7 @@ use axum::http::Request;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
-use tower_cookies::Cookies;
+use axum_extra::extract::CookieJar;
 
 /// Authentication middleware that validates JWT tokens from cookies.
 ///
@@ -29,13 +29,13 @@ use tower_cookies::Cookies;
 ///     .layer(middleware::from_fn(auth_middleware));
 /// ```
 pub async fn auth_middleware(
-    cookies: Cookies,
+    cookies: CookieJar,
     mut req: Request<Body>,
     next: Next,
 ) -> Result<impl IntoResponse, StatusCode> {
     // Extract the auth token from cookie
     let token = cookies
-        .get("auth_token")
+        .get("session_token")
         .map(|c| c.value().to_string())
         .ok_or_else(|| {
             tracing::warn!("No auth_token cookie found");

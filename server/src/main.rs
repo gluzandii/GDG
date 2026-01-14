@@ -48,21 +48,22 @@ async fn main() {
 
 #[inline(always)]
 fn create_router(pool: PgPool) -> Router {
-    // Health check route
+    // Health check route (no auth required)
     let health_routes = Router::new().route("/api/health", get(|| async { "ok :)" }));
 
-    // Authentication routes
+    // Authentication routes (no auth required)
     let auth_routes = Router::new()
         .route("/api/auth/register", post(register_route))
         .route("/api/auth/login", post(login_route));
 
-    let users_routes = Router::new()
+    // Protected user routes (auth required)
+    let protected_users_routes = Router::new()
         .route("/api/users/me", get(me_route))
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
         .merge(health_routes)
         .merge(auth_routes)
-        .merge(users_routes)
+        .merge(protected_users_routes)
         .with_state(pool)
 }
