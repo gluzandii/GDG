@@ -29,7 +29,7 @@ pub async fn new_chat_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
-    tracing::info!(user_id, "Creating new chat code");
+    tracing::debug!(user_id, "Creating new chat code");
 
     // Generate a random 6-digit numeric code
     let code = generate_chat_code();
