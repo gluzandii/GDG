@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct DeleteChatCodeRequest {
+pub struct DeleteSubmitCodeRequest {
     /// The chat code to be deleted.
     pub code: u16,
 }

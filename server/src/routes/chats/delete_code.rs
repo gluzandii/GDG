@@ -1,12 +1,13 @@
-use api_types::chats::delete_code::DeleteChatCodeRequest;
+use api_types::chats::delete_submit_code::DeleteSubmitCodeRequest;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
 
+#[tracing::instrument(name = "Delete a chat code", skip(pool, user_id, payload))]
 pub async fn delete_code_chat_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
-    Json(payload): Json<DeleteChatCodeRequest>,
+    Json(payload): Json<DeleteSubmitCodeRequest>,
 ) -> impl IntoResponse {
     // Check if the chat code exists and delete it
     let result = sqlx::query!(

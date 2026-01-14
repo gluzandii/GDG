@@ -5,4 +5,4 @@
 /// Create new chat endpoint types.
 pub mod new;
 
-pub mod delete_code;
+pub mod delete_submit_code;
