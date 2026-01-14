@@ -6,6 +6,7 @@ mod setup;
 
 use crate::routes::auth::login::login_route;
 use crate::routes::auth::register::register_route;
+use crate::routes::chats::new::new_chat_route;
 use crate::routes::users::me::me_route;
 use crate::routes::users::update::update_route;
 use crate::routes::users::update_password::update_password_route;
@@ -65,9 +66,15 @@ fn create_router(pool: PgPool) -> Router {
         .route("/api/users/update-password", post(update_password_route))
         .layer(middleware::from_fn(auth_middleware));
 
+    // Protected chat routes (auth required)
+    let protected_chat_routes = Router::new()
+        .route("/api/chats/new", post(new_chat_route))
+        .layer(middleware::from_fn(auth_middleware));
+
     Router::new()
         .merge(health_routes)
         .merge(auth_routes)
         .merge(protected_users_routes)
+        .merge(protected_chat_routes)
         .with_state(pool)
 }

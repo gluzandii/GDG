@@ -5,5 +5,8 @@
 /// Authentication routes (registration, login, etc.).
 pub mod auth;
 
+/// Chat management routes (create, list, etc.).
+pub mod chats;
+
 /// User management routes (profile, settings, etc.).
 pub mod users;

@@ -7,5 +7,8 @@
 /// Authentication-related API types and validation.
 pub mod auth;
 
+/// Chat-related API types and validation.
+pub mod chats;
+
 /// User-related API types and validation.
 pub mod users;
