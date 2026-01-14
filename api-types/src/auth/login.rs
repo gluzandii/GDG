@@ -8,7 +8,7 @@ use crate::auth::EMAIL_REGEX;
 ///
 /// Contains the username or email and password for authentication.
 #[derive(Deserialize)]
-pub struct LoginRequest {
+pub struct AuthLoginRequest {
     /// The username or email address of the user.
     pub person: String,
     /// The password for authentication.
@@ -18,7 +18,7 @@ pub struct LoginRequest {
     pub is_email: bool,
 }
 
-impl LoginRequest {
+impl AuthLoginRequest {
     /// Validates the login request.
     ///
     /// Checks that:

@@ -8,7 +8,7 @@ use crate::auth::EMAIL_REGEX;
 ///
 /// Contains the username, email, and password for a new user account.
 #[derive(Deserialize)]
-pub struct RegisterRequest {
+pub struct AuthRegisterRequest {
     /// The desired username for the new account.
     pub username: String,
     /// The email address for the new account.
@@ -32,7 +32,7 @@ pub struct LoginAndRegisterResponse {
     pub id: Option<i64>,
 }
 
-impl RegisterRequest {
+impl AuthRegisterRequest {
     /// Validates the registration request.
     ///
     /// Checks that:

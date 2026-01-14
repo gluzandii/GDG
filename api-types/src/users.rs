@@ -2,3 +2,6 @@
 
 /// User profile endpoint types.
 pub mod me;
+
+/// User update endpoint types.
+pub mod update;

@@ -3,7 +3,7 @@
 //! Handles the creation of new user accounts with validation,
 //! password hashing, and JWT token generation.
 
-use api_types::auth::register::{LoginAndRegisterResponse, RegisterRequest};
+use api_types::auth::register::{AuthRegisterRequest, LoginAndRegisterResponse};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -48,7 +48,7 @@ use utils::hashing;
 #[tracing::instrument(skip(pool, req))]
 pub async fn register_route(
     State(pool): State<PgPool>,
-    Json(req): Json<RegisterRequest>,
+    Json(req): Json<AuthRegisterRequest>,
 ) -> impl IntoResponse {
     if let Err(e) = req.validate() {
         tracing::error!(error = ?e, "Validation failed");
@@ -58,7 +58,7 @@ pub async fn register_route(
         );
     }
 
-    let RegisterRequest {
+    let AuthRegisterRequest {
         username,
         email,
         password,

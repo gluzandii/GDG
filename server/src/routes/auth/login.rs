@@ -3,7 +3,7 @@
 //! Handles user authentication with password verification
 //! and JWT token generation.
 
-use api_types::auth::login::LoginRequest;
+use api_types::auth::login::AuthLoginRequest;
 use api_types::auth::register::LoginAndRegisterResponse;
 use axum::Json;
 use axum::extract::State;
@@ -55,7 +55,7 @@ struct UserRecord {
 #[tracing::instrument(skip(pool, req))]
 pub async fn login_route(
     State(pool): State<PgPool>,
-    Json(req): Json<LoginRequest>,
+    Json(req): Json<AuthLoginRequest>,
 ) -> impl IntoResponse {
     if let Err(e) = req.validate() {
         tracing::info!(error = ?e, "Validation failed");
@@ -65,7 +65,7 @@ pub async fn login_route(
         );
     }
 
-    let LoginRequest {
+    let AuthLoginRequest {
         person,
         password,
         is_email,
