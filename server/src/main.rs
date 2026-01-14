@@ -6,6 +6,7 @@ mod setup;
 
 use crate::routes::auth::login::login_route;
 use crate::routes::auth::register::register_route;
+use crate::routes::chats::delete_code::delete_code_chat_route;
 use crate::routes::chats::new::new_chat_route;
 use crate::routes::users::me::me_route;
 use crate::routes::users::update::update_route;
@@ -13,7 +14,7 @@ use crate::routes::users::update_password::update_password_route;
 use crate::setup::{init_logging, setup_db};
 use ::middleware::auth_middleware;
 use axum::middleware;
-use axum::routing::{patch, post};
+use axum::routing::{delete, patch, post};
 use axum::{Router, routing::get};
 use sqlx::PgPool;
 use std::env;
@@ -69,6 +70,7 @@ fn create_router(pool: PgPool) -> Router {
     // Protected chat routes (auth required)
     let protected_chat_routes = Router::new()
         .route("/api/chats/new", post(new_chat_route))
+        .route("/api/chats/delete-code", delete(delete_code_chat_route))
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
