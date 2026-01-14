@@ -1,4 +1,4 @@
-use api_types::chats::delete_submit_code::DeleteSubmitCodeRequest;
+use api_types::chats::delete_submit_code::{DeleteSubmitCodeRequest, DeleteSubmitCodeResponse};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -19,8 +19,14 @@ pub async fn delete_code_chat_route(
     .await;
 
     match result {
-        Ok(Some(_)) => (StatusCode::OK).into_response(), // Successfully deleted
-        Ok(None) => (StatusCode::NOT_FOUND).into_response(), // Code not found
+        Ok(Some(_)) => (
+            StatusCode::OK,
+            Json(DeleteSubmitCodeResponse {
+                message: "Chat code deleted successfully".to_string(),
+            }),
+        )
+            .into_response(), // Successfully deleted
+        Ok(None) => error_response(StatusCode::NOT_FOUND, "Chat code not found."), // Code not found
         Err(e) => {
             tracing::error!(
                 error = ?e,

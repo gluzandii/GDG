@@ -69,7 +69,14 @@ pub async fn new_chat_route(
     }
 
     tracing::info!(user_id, code, "Chat code created successfully");
-    (StatusCode::CREATED, Json(CreateChatResponse { code })).into_response()
+    (
+        StatusCode::CREATED,
+        Json(CreateChatResponse {
+            message: "Chat code created successfully".to_string(),
+            code,
+        }),
+    )
+        .into_response()
 }
 
 /// Generates a random 5-digit numeric code for chat identification.

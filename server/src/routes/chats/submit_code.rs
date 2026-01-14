@@ -1,4 +1,4 @@
-use api_types::chats::delete_submit_code::DeleteSubmitCodeRequest;
+use api_types::chats::delete_submit_code::{DeleteSubmitCodeRequest, DeleteSubmitCodeResponse};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -64,7 +64,13 @@ pub async fn submit_code_chat_route(
             {
                 tracing::warn!(error = ?e, code = payload.code, "Failed to delete chat code");
             }
-            StatusCode::CREATED.into_response()
+            (
+                StatusCode::CREATED,
+                Json(DeleteSubmitCodeResponse {
+                    message: "Conversation created successfully".to_string(),
+                }),
+            )
+                .into_response()
         }
         Ok(None) => error_response(StatusCode::CONFLICT, "Conversation already exists."),
         Err(e) => {
