@@ -1532,6 +1532,7 @@ dependencies = [
  "axum-extra",
  "dotenvy",
  "middleware",
+ "rand",
  "sqlx",
  "tokio",
  "tracing",

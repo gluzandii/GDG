@@ -8,5 +8,5 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct CreateChatResponse {
     /// The unique code for the created chat.
-    pub code: u32,
+    pub code: u16,
 }
