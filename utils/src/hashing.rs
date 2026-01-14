@@ -64,3 +64,46 @@ pub fn verify_password<S: AsRef<str>>(
     trace!(success = result, "Password verification completed");
     Ok(result)
 }
+
+/// Validates that a password meets complexity requirements.
+///
+/// Password must meet the following criteria:
+/// - At least 6 characters long
+/// - Contains at least one uppercase letter
+/// - Contains at least one lowercase letter
+/// - Contains at least one digit
+///
+/// # Arguments
+///
+/// * `password` - The plaintext password to validate
+///
+/// # Returns
+///
+/// - `Ok(())` if the password meets all requirements
+/// - `Err(String)` containing a description of what requirement was not met
+///
+/// # Example
+///
+/// ```ignore
+/// is_password_suitable("MyPass123")?;
+/// // Error: Password must be at least 6 characters
+/// is_password_suitable("short")?;
+/// ```
+pub fn is_password_suitable<S: AsRef<str>>(password: S) -> Result<(), String> {
+    let password = password.as_ref();
+    if password.len() < 6 {
+        tracing::debug!("Password is too short");
+        return Err("Password must be at least 6 characters".into());
+    }
+
+    let mut chars = password.chars();
+    let has_upper = chars.any(|c| c.is_ascii_uppercase());
+    let has_lower = chars.any(|c| c.is_ascii_lowercase());
+    let has_digit = chars.any(|c| c.is_ascii_digit());
+
+    if !(has_upper && has_lower && has_digit) {
+        tracing::debug!("Password does not meet complexity requirements");
+        return Err("Password must contain at least one uppercase letter, one lowercase letter, and one digit".into());
+    }
+    Ok(())
+}

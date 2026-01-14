@@ -64,6 +64,13 @@ pub async fn update_password_route(
 
     // Hash the new password
     let new_pswd = payload.new_password;
+    match utils::hashing::is_password_suitable(&new_pswd) {
+        Ok(_) => (),
+        Err(e) => {
+            tracing::warn!(error = ?e, "New password is not suitable: {e}");
+            return error_response(StatusCode::BAD_REQUEST, e);
+        }
+    }
     let hashed = match utils::hashing::hash_password(new_pswd) {
         Ok(h) => h,
         Err(e) => {

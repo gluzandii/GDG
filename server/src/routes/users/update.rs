@@ -1,4 +1,7 @@
-use api_types::users::update::{UsersUpdateRequest, UsersUpdateResponse};
+use api_types::{
+    auth::EMAIL_REGEX,
+    users::update::{UsersUpdateRequest, UsersUpdateResponse},
+};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -68,6 +71,11 @@ pub async fn update_route(
     let new_email = payload.email.as_deref().unwrap_or(&user.email);
     let new_username = payload.username.as_deref().unwrap_or(&user.username);
     let new_bio = payload.bio.as_ref().or(user.bio.as_ref());
+
+    if !EMAIL_REGEX.is_match(&new_email) {
+        tracing::debug!("Invalid email address during profile update");
+        return error_response(StatusCode::BAD_REQUEST, "Email format is invalid");
+    }
 
     let mut updated_fields = vec![];
 
