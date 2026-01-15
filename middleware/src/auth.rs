@@ -28,6 +28,7 @@ use axum_extra::extract::CookieJar;
 ///     .route("/protected", get(protected_handler))
 ///     .layer(middleware::from_fn(auth_middleware));
 /// ```
+#[tracing::instrument(skip(cookies, req, next))]
 pub async fn auth_middleware(
     cookies: CookieJar,
     mut req: Request<Body>,

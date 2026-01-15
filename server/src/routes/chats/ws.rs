@@ -40,6 +40,7 @@ struct MessageNotification {
 ///
 /// # Returns
 /// Either an error response (if validation fails) or a WebSocket upgrade response
+#[tracing::instrument(skip(ws, pool, user_id, params))]
 pub async fn ws_handler(
     Query(params): Query<ChatQuery>,
     Extension(user_id): Extension<i64>,
