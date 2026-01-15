@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct DeleteSubmitCodeRequest {
@@ -11,4 +12,7 @@ pub struct DeleteSubmitCodeRequest {
 pub struct DeleteSubmitCodeResponse {
     /// Success message for the operation.
     pub message: String,
+
+    /// The ID of the created conversation (only for submission).
+    pub conversation_id: Option<Uuid>,
 }

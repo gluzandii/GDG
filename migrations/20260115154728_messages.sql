@@ -1,7 +1,7 @@
 -- Create messages table to store chat messages
 CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_sent_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

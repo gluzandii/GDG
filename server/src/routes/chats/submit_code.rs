@@ -53,7 +53,7 @@ pub async fn submit_code_chat_route(
     .await;
 
     match insert_result {
-        Ok(Some(_)) => {
+        Ok(Some(uid)) => {
             // Delete the chat code after successful conversation creation
             if let Err(e) = sqlx::query!(
                 "DELETE FROM chat_codes WHERE code = $1",
@@ -67,6 +67,7 @@ pub async fn submit_code_chat_route(
             (
                 StatusCode::CREATED,
                 Json(DeleteSubmitCodeResponse {
+                    conversation_id: Some(uid.id),
                     message: "Conversation created successfully".to_string(),
                 }),
             )

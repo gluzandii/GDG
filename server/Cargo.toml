@@ -12,6 +12,7 @@ sqlx = { version = "0.8", features = [
     "postgres",
     "macros",
     "time",
+    "uuid",
 ] }
 tokio = { version = "1.49", features = ["full"] }
 api-types = { path = "../api-types" }
@@ -20,6 +21,3 @@ middleware = { path = "../middleware" }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 axum-extra = { version = "0.12", features = ["cookie"] }
-serde_json = "1.0.149"
-futures = "0.3.31"
-serde = { version = "1.0.228", features = ["derive"] }

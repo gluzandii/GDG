@@ -22,6 +22,7 @@ pub async fn delete_code_chat_route(
         Ok(Some(_)) => (
             StatusCode::OK,
             Json(DeleteSubmitCodeResponse {
+                conversation_id: None,
                 message: "Chat code deleted successfully".to_string(),
             }),
         )

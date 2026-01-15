@@ -1,6 +1,6 @@
 -- Create conversations table to store metadata about chats between 2 users
 CREATE TABLE conversations (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id_1 BIGSERIAL NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     user_id_2 BIGSERIAL NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
