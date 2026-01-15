@@ -8,9 +8,16 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures::StreamExt;
-use sqlx::PgPool;
+use futures_util::StreamExt;
+use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, postgres::PgListener};
 use utils::errors::error_response;
+
+#[derive(Serialize, Deserialize)]
+struct MessageNotification {
+    user_id: i64,
+    content: String,
+}
 
 pub async fn ws_handler(
     Query(params): Query<ChatQuery>,
@@ -18,9 +25,9 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
-    let chat_code = match params.chat_code {
-        Some(code) => code,
-        None => return error_response(StatusCode::BAD_REQUEST, "Chat code not provided"),
+    let chat_id = match params.chat_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "Chat ID not provided"),
     };
 
     let is_participant = match sqlx::query_scalar!(
@@ -30,7 +37,7 @@ pub async fn ws_handler(
             WHERE id = $1 AND (user_id_1 = $2 OR user_id_2 = $2)
         )
         "#,
-        chat_code,
+        chat_id,
         user_id
     )
     .fetch_one(&pool)
@@ -54,49 +61,98 @@ pub async fn ws_handler(
     }
 
     ws.on_upgrade(move |socket| async move {
-        if let Err(e) = handle_socket(socket, pool, chat_code, user_id).await {
-            tracing::error!("WebSocket session ended with error: {}", e);
-        }
+        handle_socket(socket, pool, chat_id, user_id).await;
     })
 }
 
+#[tracing::instrument(skip(socket, pool, user_id, conversation_id))]
 async fn handle_socket(
     mut socket: WebSocket,
     pool: PgPool,
     conversation_id: uuid::Uuid,
     user_id: i64,
-) -> Result<(), String> {
-    while let Some(msg_result) = socket.recv().await {
-        match msg_result {
-            Ok(Message::Text(text)) => {
-                let content = text.trim();
-                if content.is_empty() {
-                    continue;
-                }
+) {
+    // Create a PostgreSQL listener for this conversation
+    let mut listener = match PgListener::connect_with(&pool).await {
+        Ok(listener) => listener,
+        Err(e) => {
+            tracing::error!("Failed to create PgListener: {}", e);
+            return;
+        }
+    };
 
-                if let Err(e) = sqlx::query!(
-                    r#"
-                    INSERT INTO messages (conversation_id, user_sent_id, content)
-                    VALUES ($1, $2, $3)
-                    "#,
-                    conversation_id,
-                    user_id,
-                    content
-                )
-                .execute(&pool)
-                .await
-                {
-                    tracing::error!("Failed to persist message: {}", e);
-                    return Err("Failed to persist message".into());
+    let channel = format!("conversation_{}", conversation_id);
+    if let Err(e) = listener.listen(&channel).await {
+        tracing::error!("Failed to listen to channel {}: {}", channel, e);
+        return;
+    }
+
+    let mut notification_stream = listener.into_stream();
+
+    loop {
+        tokio::select! {
+            // Handle incoming WebSocket messages from the client
+            msg_result = socket.recv() => {
+                match msg_result {
+                    Some(Ok(Message::Text(text))) => {
+                        let content = text.trim();
+                        if content.is_empty() {
+                            continue;
+                        }
+
+                        // Insert message into database (trigger will send notification)
+                        if let Err(e) = sqlx::query!(
+                            r#"
+                            INSERT INTO messages (conversation_id, user_sent_id, content)
+                            VALUES ($1, $2, $3)
+                            "#,
+                            conversation_id,
+                            user_id,
+                            content
+                        )
+                        .execute(&pool)
+                        .await
+                        {
+                            tracing::error!("Failed to persist message: {}", e);
+                            break;
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) | None => break,
+                    Some(Ok(_)) => continue,
+                    Some(Err(e)) => {
+                        tracing::error!("WebSocket error: {}", e);
+                        break;
+                    }
                 }
             }
-            Ok(Message::Close(_)) => break,
-            Ok(_) => continue,
-            Err(e) => {
-                return Err(format!("WebSocket error: {}", e));
+
+            // Handle incoming PostgreSQL notifications
+            notification = notification_stream.next() => {
+                match notification {
+                    Some(Ok(notification)) => {
+                        // Parse the notification payload
+                        match serde_json::from_str::<MessageNotification>(notification.payload()) {
+                            Ok(msg_notif) => {
+                                // Don't send the message back to the sender
+                                if msg_notif.user_id != user_id {
+                                    if let Err(e) = socket.send(Message::Text(msg_notif.content.into())).await {
+                                        tracing::error!("Failed to send message to WebSocket: {}", e);
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to parse notification payload: {}", e);
+                            }
+                        }
+                    }
+                    Some(Err(e)) => {
+                        tracing::error!("Notification stream error: {}", e);
+                        break;
+                    }
+                    None => break,
+                }
             }
         }
     }
-
-    Ok(())
 }

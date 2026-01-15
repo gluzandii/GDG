@@ -7,6 +7,6 @@ use uuid::Uuid;
 #[derive(Deserialize)]
 pub struct ChatQuery {
     /// The chat code to connect to
-    #[serde(rename = "chatCode")]
-    pub chat_code: Option<Uuid>,
+    #[serde(rename = "chatId")]
+    pub chat_id: Option<Uuid>,
 }
