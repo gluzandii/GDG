@@ -21,3 +21,5 @@ middleware = { path = "../middleware" }
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 axum-extra = { version = "0.12", features = ["cookie"] }
+uuid = "1.19.0"
+futures = "0.3.31"
