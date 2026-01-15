@@ -1,8 +1,32 @@
+//! Submit chat code endpoint handler.
+//!
+//! Handles the submission of chat codes to establish conversations between users.
+
 use api_types::chats::delete_submit_code::{DeleteSubmitCodeRequest, DeleteSubmitCodeResponse};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
 
+/// Handles chat code submission requests.
+///
+/// This endpoint:
+/// 1. Validates that the chat code exists and is owned by another user
+/// 2. Checks if a conversation already exists between the two users
+/// 3. Creates a new conversation if one doesn't exist
+/// 4. Returns the conversation ID
+///
+/// # Arguments
+///
+/// * `user_id` - The authenticated user's ID from the JWT cookie
+/// * `pool` - The PostgreSQL connection pool
+/// * `payload` - The submit request containing the chat code
+///
+/// # Returns
+///
+/// - `200 OK` with the conversation ID
+/// - `400 BAD REQUEST` if trying to start a conversation with yourself
+/// - `404 NOT FOUND` if the chat code doesn't exist
+/// - `500 INTERNAL SERVER ERROR` if database operations fail
 #[tracing::instrument(name = "Submit a chat code", skip(user_id, pool, payload))]
 pub async fn submit_code_chat_route(
     Extension(user_id): Extension<i64>,

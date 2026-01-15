@@ -1,3 +1,7 @@
+//! Update user profile endpoint handler.
+//!
+//! Handles updating user profile information including email, username, and bio.
+
 use api_types::{
     auth::EMAIL_REGEX,
     users::update::{UsersUpdateRequest, UsersUpdateResponse},
@@ -14,6 +18,27 @@ struct UserUpdateFields {
     password_hash: String,
 }
 
+/// Handles user profile update requests.
+///
+/// This endpoint:
+/// 1. Retrieves the current user's profile information
+/// 2. Validates the provided email and username if they differ from current values
+/// 3. Checks that the new email/username don't already exist for other users
+/// 4. Updates the user's profile in the database
+/// 5. Returns the updated profile information
+///
+/// # Arguments
+///
+/// * `pool` - The PostgreSQL connection pool
+/// * `user_id` - The authenticated user's ID from the JWT cookie
+/// * `payload` - The update request with new profile information
+///
+/// # Returns
+///
+/// - `200 OK` with the updated user profile
+/// - `400 BAD REQUEST` if validation fails (invalid email, email/username already exists)
+/// - `404 NOT FOUND` if the user doesn't exist
+/// - `500 INTERNAL SERVER ERROR` if database operations fail
 #[tracing::instrument(skip(pool, user_id, payload))]
 pub async fn update_route(
     State(pool): State<PgPool>,

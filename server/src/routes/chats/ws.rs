@@ -1,3 +1,8 @@
+//! WebSocket handler for real-time chat functionality.
+//!
+//! This module implements a real-time chat system using WebSockets and PostgreSQL LISTEN/NOTIFY.
+//! Messages are persisted to the database and broadcast to connected clients in real-time.
+
 use api_types::chats::ws::ChatQuery;
 use axum::Extension;
 use axum::http::StatusCode;
@@ -13,12 +18,28 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgListener};
 use utils::errors::error_response;
 
+/// Represents a message notification payload from PostgreSQL LISTEN/NOTIFY.
 #[derive(Serialize, Deserialize)]
 struct MessageNotification {
+    /// ID of the user who sent the message
     user_id: i64,
+    /// Content of the message
     content: String,
 }
 
+/// Handles WebSocket upgrades for real-time chat.
+///
+/// Validates that the user is a participant in the conversation, then upgrades
+/// the HTTP connection to a WebSocket and delegates to `handle_socket`.
+///
+/// # Arguments
+/// * `params` - Query parameters containing the chat ID
+/// * `user_id` - The authenticated user ID from the JWT extension
+/// * `ws` - WebSocket upgrade handler
+/// * `pool` - PostgreSQL connection pool
+///
+/// # Returns
+/// Either an error response (if validation fails) or a WebSocket upgrade response
 pub async fn ws_handler(
     Query(params): Query<ChatQuery>,
     Extension(user_id): Extension<i64>,

@@ -1,3 +1,7 @@
+//! Update user password endpoint handler.
+//!
+//! Handles changing the password for the authenticated user.
+
 use api_types::users::update_password::UpdatePasswordRequest;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
@@ -8,6 +12,27 @@ struct UserPasswordFields {
     password_hash: String,
 }
 
+/// Handles user password update requests.
+///
+/// This endpoint:
+/// 1. Retrieves the current user's password hash
+/// 2. Verifies the old password matches the stored hash
+/// 3. Validates that the new password meets requirements
+/// 4. Hashes the new password using Argon2
+/// 5. Updates the password in the database
+///
+/// # Arguments
+///
+/// * `pool` - The PostgreSQL connection pool
+/// * `user_id` - The authenticated user's ID from the JWT cookie
+/// * `payload` - The password update request with old and new passwords
+///
+/// # Returns
+///
+/// - `200 OK` on successful password update
+/// - `400 BAD REQUEST` if the old password is incorrect or new password is invalid
+/// - `404 NOT FOUND` if the user doesn't exist
+/// - `500 INTERNAL SERVER ERROR` if database operations fail
 #[tracing::instrument(skip(pool, user_id, payload))]
 pub async fn update_password_route(
     State(pool): State<PgPool>,
