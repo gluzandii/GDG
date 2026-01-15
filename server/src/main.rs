@@ -9,6 +9,7 @@ use crate::routes::auth::register::register_route;
 use crate::routes::chats::delete_code::delete_code_chat_route;
 use crate::routes::chats::new_code::new_chat_route;
 use crate::routes::chats::submit_code::submit_code_chat_route;
+use crate::routes::chats::ws::ws_handler;
 use crate::routes::users::me::me_route;
 use crate::routes::users::update::update_route;
 use crate::routes::users::update_password::update_password_route;
@@ -73,6 +74,7 @@ fn create_router(pool: PgPool) -> Router {
         .route("/api/chats/new-code", post(new_chat_route))
         .route("/api/chats/delete-code", delete(delete_code_chat_route))
         .route("/api/chats/submit-code", post(submit_code_chat_route))
+        .route("/api/chats/ws", get(ws_handler))
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
