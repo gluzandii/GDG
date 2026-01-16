@@ -21,6 +21,11 @@ use axum::routing::{any, delete, patch, post};
 use axum::{Router, routing::get};
 use sqlx::PgPool;
 use std::env;
+use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
+use tower_governor::GovernorLayer;
+use tower_governor::governor::GovernorConfigBuilder;
+use tower_governor::key_extractor::{KeyExtractor, SmartIpKeyExtractor};
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +38,7 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
     let addr = format!("127.0.0.1:{}", port);
 
-    let app = create_router(setup_db().await);
+    let app = create_router(setup_db().await).into_make_service_with_connect_info::<SocketAddr>();
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {
         Ok(listener) => listener,
@@ -55,6 +60,16 @@ async fn main() {
 
 #[inline(always)]
 fn create_router(pool: PgPool) -> Router {
+    let mut rate_limit_config = GovernorConfigBuilder::default();
+    rate_limit_config.per_second(1).burst_size(20);
+
+    let rate_limit_layer = GovernorLayer::new(Arc::new(
+        rate_limit_config
+            .key_extractor(IpRouteKeyExtractor)
+            .finish()
+            .expect("Failed to build rate limiter config"),
+    ));
+
     // Health check route (no auth required)
     let health_routes = Router::new().route("/api/health", get(|| async { "ok :)" }));
 
@@ -85,4 +100,37 @@ fn create_router(pool: PgPool) -> Router {
         .merge(protected_users_routes)
         .merge(protected_chat_routes)
         .with_state(pool)
+        .layer(rate_limit_layer)
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct IpRouteKey {
+    ip: IpAddr,
+    path: String,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct IpRouteKeyExtractor;
+
+impl KeyExtractor for IpRouteKeyExtractor {
+    type Key = IpRouteKey;
+
+    fn name(&self) -> &'static str {
+        "ip+route"
+    }
+
+    fn extract<T>(
+        &self,
+        req: &axum::http::Request<T>,
+    ) -> Result<Self::Key, tower_governor::GovernorError> {
+        let ip = SmartIpKeyExtractor.extract(req)?;
+        Ok(IpRouteKey {
+            ip,
+            path: req.uri().path().to_owned(),
+        })
+    }
+
+    fn key_name(&self, key: &Self::Key) -> Option<String> {
+        Some(format!("{} {}", key.ip, key.path))
+    }
 }
