@@ -27,7 +27,7 @@ use utils::errors::error_response;
 /// - `404 NOT FOUND` if the chat code doesn't exist or isn't owned by the user
 /// - `500 INTERNAL SERVER ERROR` if database operation fails
 #[tracing::instrument(name = "Delete a chat code", skip(pool, user_id, payload))]
-pub async fn delete_code_chat_route(
+pub async fn delete_chatcode_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
     Json(payload): Json<DeleteSubmitCodeRequest>,

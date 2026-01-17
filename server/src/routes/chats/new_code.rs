@@ -25,7 +25,7 @@ use utils::errors::error_response;
 /// - `201 CREATED` with the chat code on success
 /// - `500 INTERNAL SERVER ERROR` if database operation fails
 #[tracing::instrument(skip(pool, user_id))]
-pub async fn new_chat_route(
+pub async fn new_chatcode_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
