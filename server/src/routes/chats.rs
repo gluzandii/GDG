@@ -3,7 +3,9 @@
 //! This module contains all chat-related endpoints including creation,
 //! deletion, and real-time WebSocket communication.
 
-use api_types::chats::{ChatItem, GetChatsQuery, GetChatsResponse};
+use api_types::chats::{
+    ChatItem, DeleteMessageRequest, DeleteMessageResponse, GetChatsQuery, GetChatsResponse,
+};
 
 use axum::{
     Extension, Json,
@@ -13,6 +15,7 @@ use axum::{
 };
 use sqlx::PgPool;
 use utils::errors::error_response;
+use uuid::Uuid;
 
 /// Create new chat endpoint handler.
 pub mod new_code;
@@ -28,9 +31,126 @@ pub mod ws;
 
 /// Row structure for chat messages from database.
 struct ChatRow {
+    id: Uuid,
     content: String,
     username: String,
     sent_at: time::OffsetDateTime,
+}
+
+/// Deletes a message within a conversation for an authenticated user.
+///
+/// Steps:
+/// 1. Ensure the user participates in the conversation.
+/// 2. Verify the message belongs to the conversation.
+/// 3. Delete the message and return confirmation.
+#[tracing::instrument(
+    skip(pool, user_id),
+    fields(conversation_id = ?payload.conversation_id, message_id = ?payload.message_id)
+)]
+pub async fn delete_chat_message_route(
+    Extension(user_id): Extension<i64>,
+    State(pool): State<PgPool>,
+    Json(payload): Json<DeleteMessageRequest>,
+) -> impl IntoResponse {
+    // Validate user participation in the conversation
+    let is_participant = sqlx::query!(
+        r#"
+        SELECT EXISTS(
+            SELECT 1 FROM conversations
+            WHERE id = $1::UUID
+              AND (user_id_1 = $2 OR user_id_2 = $2)
+        ) as "exists!"
+        "#,
+        payload.conversation_id,
+        user_id
+    )
+    .fetch_one(&pool)
+    .await;
+
+    match is_participant {
+        Ok(record) if !record.exists => {
+            return error_response(
+                StatusCode::FORBIDDEN,
+                "You are not a participant in this conversation.",
+            );
+        }
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to verify conversation participation");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An error occurred while verifying conversation access.",
+            );
+        }
+        _ => {}
+    }
+
+    // Ensure the message exists in the conversation and was sent by the requester
+    let message_check = sqlx::query!(
+        r#"
+        SELECT user_sent_id
+        FROM messages
+        WHERE id = $1::UUID
+          AND conversation_id = $2::UUID
+        "#,
+        payload.message_id,
+        payload.conversation_id
+    )
+    .fetch_optional(&pool)
+    .await;
+
+    let message_row = match message_check {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return error_response(
+                StatusCode::NOT_FOUND,
+                "Message not found in this conversation.",
+            );
+        }
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to verify message existence");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An error occurred while verifying the message.",
+            );
+        }
+    };
+
+    if message_row.user_sent_id != user_id {
+        return error_response(
+            StatusCode::FORBIDDEN,
+            "You can only delete messages you sent.",
+        );
+    }
+
+    // Delete the message
+    let delete_result = sqlx::query!(
+        r#"
+        DELETE FROM messages
+        WHERE id = $1::UUID
+          AND user_sent_id = $2
+        "#,
+        payload.message_id,
+        user_id
+    )
+    .execute(&pool)
+    .await;
+
+    match delete_result {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(DeleteMessageResponse {
+                message: "Message deleted successfully.".to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!(error = ?e, "Failed to delete message");
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An error occurred while deleting the message.",
+            )
+        }
+    }
 }
 
 /// Handles chat message retrieval requests.
@@ -118,7 +238,7 @@ pub async fn get_chats_route(
     let result = sqlx::query_as!(
         ChatRow,
         r#"
-        SELECT messages.content, users.username, messages.sent_at
+                SELECT messages.id as "id: Uuid", messages.content, users.username, messages.sent_at
         FROM messages
         JOIN users ON messages.user_sent_id = users.id
         WHERE messages.conversation_id = $1::UUID
@@ -149,6 +269,7 @@ pub async fn get_chats_route(
             let chats: Vec<ChatItem> = rows
                 .into_iter()
                 .map(|row| ChatItem {
+                    id: row.id,
                     content: row.content,
                     user_sent: row.username,
                     sent_at: row

@@ -47,10 +47,30 @@ pub struct GetChatsResponse {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatItem {
+    /// Unique identifier for the message.
+    pub id: Uuid,
     /// The message content.
     pub content: String,
     /// The user who sent the message.
     pub user_sent: String,
     /// Timestamp when the message was sent.
     pub sent_at: String,
+}
+
+/// Request payload for deleting a chat message.
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteMessageRequest {
+    /// Conversation that the message belongs to.
+    pub conversation_id: Uuid,
+    /// The message to delete.
+    pub message_id: Uuid,
+}
+
+/// Response payload for deleting a chat message.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteMessageResponse {
+    /// Confirmation message.
+    pub message: String,
 }
