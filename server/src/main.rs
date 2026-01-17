@@ -13,7 +13,7 @@ use crate::routes::chats::new_code::new_chat_route;
 use crate::routes::chats::submit_code::submit_code_chat_route;
 use crate::routes::chats::update_chat_message_route;
 use crate::routes::chats::ws::ws_handler;
-use crate::routes::users::me::me_route;
+use crate::routes::users::get::get_users_route;
 use crate::routes::users::update::update_route;
 use crate::routes::users::update_password::update_password_route;
 use crate::setup::{init_logging, setup_db};
@@ -82,7 +82,7 @@ fn create_router(pool: PgPool) -> Router {
 
     // Protected user routes (auth required)
     let protected_users_routes = Router::new()
-        .route("/api/users/me", get(me_route))
+        .route("/api/users", get(get_users_route))
         .route("/api/users/update", patch(update_route))
         .route("/api/users/update-password", patch(update_password_route))
         .layer(middleware::from_fn(auth_middleware));

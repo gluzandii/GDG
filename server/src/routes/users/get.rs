@@ -36,7 +36,7 @@ use utils::errors::error_response;
 /// }
 /// ```
 #[tracing::instrument(skip(pool, user_id))]
-pub async fn me_route(
+pub async fn get_users_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {

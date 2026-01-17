@@ -4,7 +4,7 @@
 //! profile updates, and password management.
 
 /// Get current user profile endpoint handler.
-pub mod me;
+pub mod get;
 /// Update user profile endpoint handler.
 pub mod update;
 /// Update user password endpoint handler.
