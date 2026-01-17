@@ -1,21 +1,43 @@
-use api_types::chats::UpdateMessageResponse;
-use axum::http::StatusCode;
+use api_types::chats::messages::delete::{
+    ApiChatsMessagesDeleteRequest, ApiChatsMessagesDeleteResponse,
+};
+use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
-use uuid::Uuid;
+use utils::errors::error_response;
 
-/// Updates a message within a conversation for an authenticated user.
+/// Deletes a message within a conversation for an authenticated user.
 ///
 /// Steps:
 /// 1. Ensure the user participates in the conversation.
-/// 2. Verify the message belongs to the conversation and was sent by the user.
-/// 3. Update the message content and edited_at timestamp.
-pub async fn update_message_impl(
+/// 2. Verify the message belongs to the conversation.
+/// 3. Delete the message and return confirmation.
+#[tracing::instrument(
+    skip(pool, user_id),
+    fields(conversation_id = ?payload.conversation_id, message_id = ?payload.message_id)
+)]
+pub async fn api_chats_messages_delete(
+    Extension(user_id): Extension<i64>,
+    State(pool): State<PgPool>,
+    Json(payload): Json<ApiChatsMessagesDeleteRequest>,
+) -> impl IntoResponse {
+    match delete_message_impl(user_id, &pool, payload.conversation_id, payload.message_id).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err((status, message)) => error_response(status, &message),
+    }
+}
+
+/// Deletes a message within a conversation for an authenticated user.
+///
+/// Steps:
+/// 1. Ensure the user participates in the conversation.
+/// 2. Verify the message belongs to the conversation.
+/// 3. Delete the message and return confirmation.
+pub async fn delete_message_impl(
     user_id: i64,
     pool: &PgPool,
-    conversation_id: Uuid,
-    message_id: Uuid,
-    content: String,
-) -> Result<UpdateMessageResponse, (StatusCode, String)> {
+    conversation_id: uuid::Uuid,
+    message_id: uuid::Uuid,
+) -> Result<ApiChatsMessagesDeleteResponse, (StatusCode, String)> {
     // Validate user participation in the conversation
     let is_participant = sqlx::query!(
         r#"
@@ -82,47 +104,32 @@ pub async fn update_message_impl(
     if message_row.user_sent_id != user_id {
         return Err((
             StatusCode::FORBIDDEN,
-            "You can only update messages you sent.".to_string(),
+            "You can only delete messages you sent.".to_string(),
         ));
     }
 
-    // Update the message content and edited_at timestamp
-    let update_result = sqlx::query!(
+    // Delete the message
+    let delete_result = sqlx::query!(
         r#"
-        UPDATE messages
-        SET content = $1, edited_at = CURRENT_TIMESTAMP
-        WHERE id = $2::UUID
-          AND user_sent_id = $3
-        RETURNING edited_at
+        DELETE FROM messages
+        WHERE id = $1::UUID
+          AND user_sent_id = $2
         "#,
-        content,
         message_id,
         user_id
     )
-    .fetch_optional(pool)
+    .execute(pool)
     .await;
 
-    match update_result {
-        Ok(Some(row)) => {
-            let edited_at = row
-                .edited_at
-                .format(&time::format_description::well_known::Rfc3339)
-                .unwrap_or("Wasn't able to format timestamp".to_string());
-
-            Ok(UpdateMessageResponse {
-                message: "Message updated successfully.".to_string(),
-                edited_at,
-            })
-        }
-        Ok(None) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to update message.".to_string(),
-        )),
+    match delete_result {
+        Ok(_) => Ok(ApiChatsMessagesDeleteResponse {
+            message: "Message deleted successfully.".to_string(),
+        }),
         Err(e) => {
-            tracing::error!(error = ?e, "Failed to update message");
+            tracing::error!(error = ?e, "Failed to delete message");
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while updating the message.".to_string(),
+                "An error occurred while deleting the message.".to_string(),
             ))
         }
     }

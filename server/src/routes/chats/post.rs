@@ -2,7 +2,7 @@
 //!
 //! Handles the submission of chat codes to establish conversations between users.
 
-use api_types::chats::delete_submit_code::{DeleteSubmitCodeRequest, DeleteSubmitCodeResponse};
+use api_types::chats::codes::post::{ApiChatsCodesPostRequest, ApiChatsCodesPostResponse};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -28,10 +28,10 @@ use utils::errors::error_response;
 /// - `404 NOT FOUND` if the chat code doesn't exist
 /// - `500 INTERNAL SERVER ERROR` if database operations fail
 #[tracing::instrument(name = "Submit a chat code", skip(user_id, pool, payload))]
-pub async fn submit_code_chat_route(
+pub async fn api_chats_post(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
-    Json(payload): Json<DeleteSubmitCodeRequest>,
+    Json(payload): Json<ApiChatsCodesPostRequest>,
 ) -> impl IntoResponse {
     tracing::debug!(user_id, code = payload.code, "Submitting chat code");
 
@@ -90,7 +90,7 @@ pub async fn submit_code_chat_route(
             }
             (
                 StatusCode::CREATED,
-                Json(DeleteSubmitCodeResponse {
+                Json(ApiChatsCodesPostResponse {
                     conversation_id: Some(uid.id),
                     message: "Conversation created successfully".to_string(),
                 }),

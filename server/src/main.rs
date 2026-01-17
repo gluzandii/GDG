@@ -4,17 +4,17 @@ mod routes;
 /// Setup utilities for logging and database connections.
 mod setup;
 
-use crate::routes::auth::login::login_route;
-use crate::routes::auth::register::register_route;
-use crate::routes::chats::delete_chat_message_route;
-use crate::routes::chats::delete_code::delete_chatcode_route;
-use crate::routes::chats::get_chats_route;
-use crate::routes::chats::new_code::new_chatcode_route;
-use crate::routes::chats::submit_code::submit_code_chat_route;
-use crate::routes::chats::update_chat_message_route;
-use crate::routes::chats::ws::ws_handler;
-use crate::routes::users::get::get_users_route;
-use crate::routes::users::update::update_route;
+use crate::routes::auth::login::api_auth_login_post;
+use crate::routes::auth::register::api_auth_register_post;
+use crate::routes::chats::codes::delete::api_chats_codes_delete;
+use crate::routes::chats::codes::post::api_chats_codes_post;
+use crate::routes::chats::messages::delete::api_chats_messages_delete;
+use crate::routes::chats::messages::get::api_chats_messages_get;
+use crate::routes::chats::messages::patch::api_chats_messages_patch;
+use crate::routes::chats::post::api_chats_post;
+use crate::routes::chats::ws::api_chats_ws;
+use crate::routes::users::get::api_users_get;
+use crate::routes::users::patch::api_users_patch;
 use crate::setup::{init_logging, setup_db};
 use ::middleware::auth_middleware;
 use axum::middleware;
@@ -76,31 +76,31 @@ fn create_router(pool: PgPool) -> Router {
 
     // Authentication routes (no auth required)
     let auth_routes = Router::new()
-        .route("/api/auth/register", post(register_route))
-        .route("/api/auth/login", post(login_route));
+        .route("/api/auth/register", post(api_auth_register_post))
+        .route("/api/auth/login", post(api_auth_login_post));
 
     // Protected user routes (auth required)
     let protected_users_routes = Router::new()
-        .route("/api/users", get(get_users_route).put(update_route))
+        .route("/api/users", get(api_users_get).patch(api_users_patch))
         .layer(middleware::from_fn(auth_middleware));
 
     // Protected chat routes (auth required)
     let protected_chat_routes = Router::new()
         .route(
-            "/api/chats/codes",
-            post(new_chatcode_route).delete(delete_chatcode_route),
+            "/api/chats",
+            post(api_chats_post), // Submit the chat code
         )
         .route(
-            "/api/chats",
-            post(submit_code_chat_route), // Submit the chat code
+            "/api/chats/codes",
+            post(api_chats_codes_post).delete(api_chats_codes_delete),
         )
         .route(
             "/api/chats/messages",
-            get(get_chats_route)
-                .delete(delete_chat_message_route)
-                .patch(update_chat_message_route),
+            get(api_chats_messages_get)
+                .delete(api_chats_messages_delete)
+                .patch(api_chats_messages_patch),
         )
-        .route("/api/chats/ws", any(ws_handler))
+        .route("/api/chats/ws", any(api_chats_ws))
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()

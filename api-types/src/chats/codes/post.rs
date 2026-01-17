@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
-pub struct DeleteSubmitCodeRequest {
+pub struct ApiChatsCodesPostRequest {
     /// The chat code to be deleted or submitted.
     pub code: u16,
 }
 
 /// Response payload for successful code operations (deletion or submission).
 #[derive(Serialize)]
-pub struct DeleteSubmitCodeResponse {
+pub struct ApiChatsCodesPostResponse {
     /// Success message for the operation.
     pub message: String,
 

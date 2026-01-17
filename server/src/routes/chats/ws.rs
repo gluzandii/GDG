@@ -3,7 +3,7 @@
 //! This module implements a real-time chat system using WebSockets and PostgreSQL LISTEN/NOTIFY.
 //! Messages are persisted to the database and broadcast to connected clients in real-time.
 
-use api_types::chats::ws::ChatQuery;
+use api_types::chats::ws::ApiChatsWsQuery;
 use axum::Extension;
 use axum::http::StatusCode;
 use axum::{
@@ -41,8 +41,8 @@ struct MessageNotification {
 /// # Returns
 /// Either an error response (if validation fails) or a WebSocket upgrade response
 #[tracing::instrument(skip(ws, pool, user_id, params))]
-pub async fn ws_handler(
-    Query(params): Query<ChatQuery>,
+pub async fn api_chats_ws(
+    Query(params): Query<ApiChatsWsQuery>,
     Extension(user_id): Extension<i64>,
     ws: WebSocketUpgrade,
     State(pool): State<PgPool>,

@@ -2,7 +2,7 @@
 //!
 //! Handles fetching the authenticated user's profile information.
 
-use api_types::users::me::UsersMeResponse;
+use api_types::users::get::UsersMeResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -36,7 +36,7 @@ use utils::errors::error_response;
 /// }
 /// ```
 #[tracing::instrument(skip(pool, user_id))]
-pub async fn get_users_route(
+pub async fn api_users_get(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {

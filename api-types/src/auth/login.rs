@@ -1,6 +1,6 @@
 //! User login request and response types.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::auth::EMAIL_REGEX;
 
@@ -8,7 +8,7 @@ use crate::auth::EMAIL_REGEX;
 ///
 /// Contains the username or email and password for authentication.
 #[derive(Deserialize)]
-pub struct AuthLoginRequest {
+pub struct ApiAuthLoginRequest {
     /// The username or email address of the user.
     pub person: String,
     /// The password for authentication.
@@ -19,7 +19,7 @@ pub struct AuthLoginRequest {
     pub is_email: bool,
 }
 
-impl AuthLoginRequest {
+impl ApiAuthLoginRequest {
     /// Validates the login request.
     ///
     /// Checks that:
@@ -44,4 +44,16 @@ impl AuthLoginRequest {
 
         Ok(())
     }
+}
+/// Response payload for user registration.
+///
+/// Indicates whether registration succeeded and provides relevant information.
+#[derive(Serialize)]
+pub struct ApiAuthLoginResponse {
+    /// Whether the registration was successful.
+    pub ok: bool,
+    /// A human-readable message describing the result.
+    pub message: String,
+    /// The ID of the newly created user (only present if registration succeeded).
+    pub id: Option<i64>,
 }

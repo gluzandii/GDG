@@ -4,7 +4,7 @@
 
 use api_types::{
     auth::EMAIL_REGEX,
-    users::update::{UsersUpdateRequest, UsersUpdateResponse},
+    users::patch::{UsersUpdateRequest, UsersUpdateResponse},
 };
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
@@ -40,7 +40,7 @@ struct UserUpdateFields {
 /// - `404 NOT FOUND` if the user doesn't exist
 /// - `500 INTERNAL SERVER ERROR` if database operations fail
 #[tracing::instrument(skip(pool, user_id, payload))]
-pub async fn update_route(
+pub async fn api_users_patch(
     State(pool): State<PgPool>,
     Extension(user_id): Extension<i64>,
     Json(payload): Json<UsersUpdateRequest>,

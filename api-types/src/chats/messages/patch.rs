@@ -4,7 +4,7 @@ use uuid::Uuid;
 /// Request payload for updating a chat message.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct UpdateMessageRequest {
+pub struct ApiChatsMessagesPatchRequest {
     /// Conversation that the message belongs to.
     pub conversation_id: Uuid,
     /// The message to update.
@@ -16,7 +16,7 @@ pub struct UpdateMessageRequest {
 /// Response payload for updating a chat message.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct UpdateMessageResponse {
+pub struct ApiChatsMessagesPatchResponse {
     /// Confirmation message.
     pub message: String,
     /// Timestamp when the message was last edited.

@@ -2,7 +2,7 @@
 //!
 //! Handles deletion of chat codes for the authenticated user.
 
-use api_types::chats::delete_submit_code::{DeleteSubmitCodeRequest, DeleteSubmitCodeResponse};
+use api_types::chats::codes::delete::{ApiChatsCodeDeleteResponse, ApiChatsCodesDeleteRequest};
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -27,10 +27,10 @@ use utils::errors::error_response;
 /// - `404 NOT FOUND` if the chat code doesn't exist or isn't owned by the user
 /// - `500 INTERNAL SERVER ERROR` if database operation fails
 #[tracing::instrument(name = "Delete a chat code", skip(pool, user_id, payload))]
-pub async fn delete_chatcode_route(
+pub async fn api_chats_codes_delete(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
-    Json(payload): Json<DeleteSubmitCodeRequest>,
+    Json(payload): Json<ApiChatsCodesDeleteRequest>,
 ) -> impl IntoResponse {
     // Check if the chat code exists and delete it
     let result = sqlx::query!(
@@ -44,7 +44,7 @@ pub async fn delete_chatcode_route(
     match result {
         Ok(Some(_)) => (
             StatusCode::OK,
-            Json(DeleteSubmitCodeResponse {
+            Json(ApiChatsCodeDeleteResponse {
                 conversation_id: None,
                 message: "Chat code deleted successfully".to_string(),
             }),

@@ -4,7 +4,7 @@ use uuid::Uuid;
 /// Request payload for deleting a chat message.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct DeleteMessageRequest {
+pub struct ApiChatsMessagesDeleteRequest {
     /// Conversation that the message belongs to.
     pub conversation_id: Uuid,
     /// The message to delete.
@@ -14,7 +14,7 @@ pub struct DeleteMessageRequest {
 /// Response payload for deleting a chat message.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeleteMessageResponse {
+pub struct ApiChatsMessagesDeleteResponse {
     /// Confirmation message.
     pub message: String,
 }

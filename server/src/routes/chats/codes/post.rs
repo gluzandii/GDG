@@ -2,7 +2,7 @@
 //!
 //! Handles creation of new chat conversations.
 
-use api_types::chats::new_code::CreateChatResponse;
+use api_types::chats::post::ApiChatsPostResponse;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -25,7 +25,7 @@ use utils::errors::error_response;
 /// - `201 CREATED` with the chat code on success
 /// - `500 INTERNAL SERVER ERROR` if database operation fails
 #[tracing::instrument(skip(pool, user_id))]
-pub async fn new_chatcode_route(
+pub async fn api_chats_codes_post(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
@@ -71,7 +71,7 @@ pub async fn new_chatcode_route(
     tracing::info!(user_id, code, "Chat code created successfully");
     (
         StatusCode::CREATED,
-        Json(CreateChatResponse {
+        Json(ApiChatsPostResponse {
             message: "Chat code created successfully".to_string(),
             code,
         }),

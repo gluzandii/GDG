@@ -1,7 +1,55 @@
-use api_types::chats::{ChatItem, GetChatsResponse};
-use axum::http::StatusCode;
+use api_types::chats::messages::get::{
+    ApiChatsMessagesGetRequest, ApiChatsMessagesGetResponse, ChatItem,
+};
+use axum::{
+    Extension, Json,
+    extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use sqlx::PgPool;
+use utils::errors::error_response;
 use uuid::Uuid;
+
+/// Handles chat message retrieval requests.
+///
+/// This endpoint:
+/// 1. Extracts the user ID from the authentication cookie
+/// 2. Retrieves messages from a conversation based on query parameters:
+///    - Supports cursor-based pagination using `cursor` and `limit`
+/// 3. Returns messages in descending order by sent_at timestamp and includes pagination metadata
+///
+/// # Arguments
+///
+/// * `user_id` - The authenticated user's ID from the JWT cookie
+/// * `pool` - The PostgreSQL connection pool
+/// * `query` - Query parameters including conversation_id and optional filters
+///
+/// # Returns
+///
+/// - `200 OK` with the list of messages on success
+/// - `500 INTERNAL SERVER ERROR` if database operation fails
+#[tracing::instrument(skip(pool, user_id), fields(cursor = ?query.cursor, limit = ?query.limit))]
+pub async fn api_chats_messages_get(
+    Extension(user_id): Extension<i64>,
+    State(pool): State<PgPool>,
+    Query(query): Query<ApiChatsMessagesGetRequest>,
+) -> impl IntoResponse {
+    tracing::debug!(user_id, conversation_id = ?query.conversation_id, "Retrieving messages");
+
+    match get_messages_impl(
+        user_id,
+        &pool,
+        query.conversation_id,
+        query.cursor,
+        query.limit,
+    )
+    .await
+    {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err((status, message)) => error_response(status, &message),
+    }
+}
 
 /// Row structure for chat messages from database.
 pub struct ChatRow {
@@ -30,13 +78,14 @@ pub struct ChatRow {
 ///
 /// - `Ok(GetChatsResponse)` with the list of messages on success
 /// - `Err((StatusCode, String))` if database operation fails
+#[inline(always)]
 pub async fn get_messages_impl(
     user_id: i64,
     pool: &PgPool,
     conversation_id: Uuid,
     cursor: Option<String>,
     limit: Option<i64>,
-) -> Result<GetChatsResponse, (StatusCode, String)> {
+) -> Result<ApiChatsMessagesGetResponse, (StatusCode, String)> {
     // Verify that the user is a participant in the conversation
     let is_participant = sqlx::query!(
         r#"
@@ -136,7 +185,7 @@ pub async fn get_messages_impl(
                 })
                 .collect();
 
-            Ok(GetChatsResponse {
+            Ok(ApiChatsMessagesGetResponse {
                 chats,
                 next_cursor,
                 has_more,

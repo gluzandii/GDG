@@ -6,7 +6,7 @@ use uuid::Uuid;
 /// Supports cursor-based pagination using `cursor` and `limit`.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetChatsQuery {
+pub struct ApiChatsMessagesGetRequest {
     /// The conversation ID to retrieve messages from.
     pub conversation_id: Uuid,
     /// Timestamp cursor (RFC3339). Returns messages sent before this cursor when provided.
@@ -20,7 +20,7 @@ pub struct GetChatsQuery {
 /// Contains a list of chat codes and their metadata.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GetChatsResponse {
+pub struct ApiChatsMessagesGetResponse {
     /// List of chats belonging to the user.
     pub chats: Vec<ChatItem>,
     /// Cursor for fetching the next page (older messages). None when there are no more.

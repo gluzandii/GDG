@@ -1,7 +1,7 @@
 //! User-related API types and responses.
 
 /// User profile endpoint types.
-pub mod me;
+pub mod get;
 
 /// User update endpoint types.
-pub mod update;
+pub mod patch;

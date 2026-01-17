@@ -6,4 +6,4 @@
 /// Get current user profile endpoint handler.
 pub mod get;
 /// Update user profile endpoint handler.
-pub mod update;
+pub mod patch;
