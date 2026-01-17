@@ -7,5 +7,3 @@
 pub mod get;
 /// Update user profile endpoint handler.
 pub mod update;
-/// Update user password endpoint handler.
-pub mod update_password;

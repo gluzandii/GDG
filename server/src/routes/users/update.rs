@@ -103,6 +103,7 @@ pub async fn update_route(
     }
 
     let mut updated_fields = vec![];
+    let mut new_password_hash = user.password_hash.clone();
 
     if payload.email.is_some() && payload.email.as_deref() != Some(user.email.as_str()) {
         updated_fields.push("email".to_string());
@@ -114,16 +115,40 @@ pub async fn update_route(
         updated_fields.push("bio".to_string());
     }
 
+    // Handle password update if a new password is provided
+    if let Some(ref new_password) = payload.new_password {
+        // Validate the new password meets requirements
+        match utils::hashing::is_password_suitable(new_password) {
+            Ok(_) => (),
+            Err(e) => {
+                tracing::warn!(error = ?e, "New password is not suitable: {e}");
+                return error_response(StatusCode::BAD_REQUEST, e);
+            }
+        }
+        // Hash the new password
+        match utils::hashing::hash_password(new_password) {
+            Ok(h) => {
+                new_password_hash = h;
+                updated_fields.push("password".to_string());
+            }
+            Err(e) => {
+                tracing::error!(error = ?e, "Failed to hash new password");
+                return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Error hashing password");
+            }
+        }
+    }
+
     // Update the user in the database
     match sqlx::query!(
         r#"
         UPDATE users
-        SET email = $1, username = $2, bio = $3, updated_at = NOW()
-        WHERE id = $4
+        SET email = $1, username = $2, bio = $3, password_hash = $4, updated_at = NOW()
+        WHERE id = $5
         "#,
         new_email,
         new_username,
         new_bio,
+        new_password_hash,
         user_id
     )
     .execute(&pool)

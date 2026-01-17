@@ -16,6 +16,8 @@ pub struct UsersUpdateRequest {
     pub bio: Option<String>,
     /// Password for verification before sensitive operations.
     pub password: String,
+    /// Optional new password to update the user's password.
+    pub new_password: Option<String>,
 }
 
 #[derive(serde::Serialize)]

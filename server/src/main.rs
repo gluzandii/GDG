@@ -15,11 +15,10 @@ use crate::routes::chats::update_chat_message_route;
 use crate::routes::chats::ws::ws_handler;
 use crate::routes::users::get::get_users_route;
 use crate::routes::users::update::update_route;
-use crate::routes::users::update_password::update_password_route;
 use crate::setup::{init_logging, setup_db};
 use ::middleware::auth_middleware;
 use axum::middleware;
-use axum::routing::{any, delete, patch, post};
+use axum::routing::{any, delete, post};
 use axum::{Router, routing::get};
 use sqlx::PgPool;
 use std::env;
@@ -82,9 +81,7 @@ fn create_router(pool: PgPool) -> Router {
 
     // Protected user routes (auth required)
     let protected_users_routes = Router::new()
-        .route("/api/users", get(get_users_route))
-        .route("/api/users/update", patch(update_route))
-        .route("/api/users/update-password", patch(update_password_route))
+        .route("/api/users", get(get_users_route).put(update_route))
         .layer(middleware::from_fn(auth_middleware));
 
     // Protected chat routes (auth required)
