@@ -3,10 +3,7 @@
 //! This module contains all chat-related endpoints including creation,
 //! deletion, and real-time WebSocket communication.
 
-use api_types::chats::{
-    ChatItem, DeleteMessageRequest, DeleteMessageResponse, GetChatsQuery, GetChatsResponse,
-    UpdateMessageRequest, UpdateMessageResponse,
-};
+use api_types::chats::{DeleteMessageRequest, GetChatsQuery, UpdateMessageRequest};
 
 use axum::{
     Extension, Json,
@@ -16,7 +13,6 @@ use axum::{
 };
 use sqlx::PgPool;
 use utils::errors::error_response;
-use uuid::Uuid;
 
 /// Create new chat endpoint handler.
 pub mod new_code;
@@ -30,13 +26,14 @@ pub mod submit_code;
 /// WebSocket real-time chat handler.
 pub mod ws;
 
-/// Row structure for chat messages from database.
-struct ChatRow {
-    id: Uuid,
-    content: String,
-    username: String,
-    sent_at: time::OffsetDateTime,
-}
+/// Delete message implementation.
+pub mod delete;
+
+/// Get messages implementation.
+pub mod get;
+
+/// Update message implementation.
+pub mod patch;
 
 /// Deletes a message within a conversation for an authenticated user.
 ///
@@ -53,104 +50,11 @@ pub async fn delete_chat_message_route(
     State(pool): State<PgPool>,
     Json(payload): Json<DeleteMessageRequest>,
 ) -> impl IntoResponse {
-    // Validate user participation in the conversation
-    let is_participant = sqlx::query!(
-        r#"
-        SELECT EXISTS(
-            SELECT 1 FROM conversations
-            WHERE id = $1::UUID
-              AND (user_id_1 = $2 OR user_id_2 = $2)
-        ) as "exists!"
-        "#,
-        payload.conversation_id,
-        user_id
-    )
-    .fetch_one(&pool)
-    .await;
-
-    match is_participant {
-        Ok(record) if !record.exists => {
-            return error_response(
-                StatusCode::FORBIDDEN,
-                "You are not a participant in this conversation.",
-            );
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to verify conversation participation");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while verifying conversation access.",
-            );
-        }
-        _ => {}
-    }
-
-    // Ensure the message exists in the conversation and was sent by the requester
-    let message_check = sqlx::query!(
-        r#"
-        SELECT user_sent_id
-        FROM messages
-        WHERE id = $1::UUID
-          AND conversation_id = $2::UUID
-        "#,
-        payload.message_id,
-        payload.conversation_id
-    )
-    .fetch_optional(&pool)
-    .await;
-
-    let message_row = match message_check {
-        Ok(Some(row)) => row,
-        Ok(None) => {
-            return error_response(
-                StatusCode::NOT_FOUND,
-                "Message not found in this conversation.",
-            );
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to verify message existence");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while verifying the message.",
-            );
-        }
-    };
-
-    if message_row.user_sent_id != user_id {
-        return error_response(
-            StatusCode::FORBIDDEN,
-            "You can only delete messages you sent.",
-        );
-    }
-
-    // Delete the message
-    let delete_result = sqlx::query!(
-        r#"
-        DELETE FROM messages
-        WHERE id = $1::UUID
-          AND user_sent_id = $2
-        "#,
-        payload.message_id,
-        user_id
-    )
-    .execute(&pool)
-    .await;
-
-    match delete_result {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(DeleteMessageResponse {
-                message: "Message deleted successfully.".to_string(),
-            }),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to delete message");
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while deleting the message.",
-            )
-        }
+    match delete::delete_message_impl(user_id, &pool, payload.conversation_id, payload.message_id)
+        .await
+    {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err((status, message)) => error_response(status, &message),
     }
 }
 
@@ -169,119 +73,17 @@ pub async fn update_chat_message_route(
     State(pool): State<PgPool>,
     Json(payload): Json<UpdateMessageRequest>,
 ) -> impl IntoResponse {
-    // Validate user participation in the conversation
-    let is_participant = sqlx::query!(
-        r#"
-        SELECT EXISTS(
-            SELECT 1 FROM conversations
-            WHERE id = $1::UUID
-              AND (user_id_1 = $2 OR user_id_2 = $2)
-        ) as "exists!"
-        "#,
+    match patch::update_message_impl(
+        user_id,
+        &pool,
         payload.conversation_id,
-        user_id
-    )
-    .fetch_one(&pool)
-    .await;
-
-    match is_participant {
-        Ok(record) if !record.exists => {
-            return error_response(
-                StatusCode::FORBIDDEN,
-                "You are not a participant in this conversation.",
-            );
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to verify conversation participation");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while verifying conversation access.",
-            );
-        }
-        _ => {}
-    }
-
-    // Ensure the message exists in the conversation and was sent by the requester
-    let message_check = sqlx::query!(
-        r#"
-        SELECT user_sent_id
-        FROM messages
-        WHERE id = $1::UUID
-          AND conversation_id = $2::UUID
-        "#,
         payload.message_id,
-        payload.conversation_id
-    )
-    .fetch_optional(&pool)
-    .await;
-
-    let message_row = match message_check {
-        Ok(Some(row)) => row,
-        Ok(None) => {
-            return error_response(
-                StatusCode::NOT_FOUND,
-                "Message not found in this conversation.",
-            );
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to verify message existence");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while verifying the message.",
-            );
-        }
-    };
-
-    if message_row.user_sent_id != user_id {
-        return error_response(
-            StatusCode::FORBIDDEN,
-            "You can only update messages you sent.",
-        );
-    }
-
-    // Update the message content and edited_at timestamp
-    let update_result = sqlx::query!(
-        r#"
-        UPDATE messages
-        SET content = $1, edited_at = CURRENT_TIMESTAMP
-        WHERE id = $2::UUID
-          AND user_sent_id = $3
-        RETURNING edited_at
-        "#,
         payload.content,
-        payload.message_id,
-        user_id
     )
-    .fetch_optional(&pool)
-    .await;
-
-    match update_result {
-        Ok(Some(row)) => {
-            let edited_at = row
-                .edited_at
-                .format(&time::format_description::well_known::Rfc3339)
-                .unwrap_or("Wasn't able to format timestamp".to_string());
-
-            (
-                StatusCode::OK,
-                Json(UpdateMessageResponse {
-                    message: "Message updated successfully.".to_string(),
-                    edited_at,
-                }),
-            )
-                .into_response()
-        }
-        Ok(None) => error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to update message.",
-        ),
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to update message");
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while updating the message.",
-            )
-        }
+    .await
+    {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err((status, message)) => error_response(status, &message),
     }
 }
 
@@ -311,122 +113,16 @@ pub async fn get_chats_route(
 ) -> impl IntoResponse {
     tracing::debug!(user_id, conversation_id = ?query.conversation_id, "Retrieving messages");
 
-    // Verify that the user is a participant in the conversation
-    let is_participant = sqlx::query!(
-        r#"
-        SELECT EXISTS(
-            SELECT 1 FROM conversations
-            WHERE id = $1::UUID
-              AND (user_id_1 = $2 OR user_id_2 = $2)
-        ) as "exists!"
-        "#,
+    match get::get_messages_impl(
+        user_id,
+        &pool,
         query.conversation_id,
-        user_id
+        query.cursor,
+        query.limit,
     )
-    .fetch_one(&pool)
-    .await;
-
-    match is_participant {
-        Ok(record) if !record.exists => {
-            tracing::warn!("User attempted to access conversation they are not part of");
-            return error_response(
-                StatusCode::FORBIDDEN,
-                "You are not a participant in this conversation.",
-            );
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "Failed to verify conversation participation");
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while verifying conversation access.",
-            );
-        }
-        _ => {}
-    }
-
-    const DEFAULT_LIMIT: i64 = 50;
-    const MAX_LIMIT: i64 = 100;
-
-    let limit = query
-        .limit
-        .map(|value| value.clamp(1, MAX_LIMIT))
-        .unwrap_or(DEFAULT_LIMIT);
-    let fetch_limit = limit + 1;
-
-    let cursor_timestamp = if let Some(cursor) = query.cursor.as_deref() {
-        match time::OffsetDateTime::parse(cursor, &time::format_description::well_known::Rfc3339) {
-            Ok(ts) => Some(ts),
-            Err(_) => {
-                return error_response(
-                    StatusCode::BAD_REQUEST,
-                    "Invalid cursor format. Use RFC3339 timestamp.",
-                );
-            }
-        }
-    } else {
-        None
-    };
-
-    let result = sqlx::query_as!(
-        ChatRow,
-        r#"
-                SELECT messages.id as "id: Uuid", messages.content, users.username, messages.sent_at
-        FROM messages
-        JOIN users ON messages.user_sent_id = users.id
-        WHERE messages.conversation_id = $1::UUID
-          AND ($2::TIMESTAMPTZ IS NULL OR messages.sent_at < $2::TIMESTAMPTZ)
-        ORDER BY messages.sent_at DESC
-        LIMIT $3
-        "#,
-        query.conversation_id,
-        cursor_timestamp,
-        fetch_limit
-    )
-    .fetch_all(&pool)
-    .await;
-
-    match result {
-        Ok(mut rows) => {
-            let has_more = (rows.len() as i64) > limit;
-            if has_more {
-                rows.truncate(limit as usize);
-            }
-
-            let next_cursor = rows.last().and_then(|row| {
-                row.sent_at
-                    .format(&time::format_description::well_known::Rfc3339)
-                    .ok()
-            });
-
-            let chats: Vec<ChatItem> = rows
-                .into_iter()
-                .map(|row| ChatItem {
-                    id: row.id,
-                    content: row.content,
-                    user_sent: row.username,
-                    sent_at: row
-                        .sent_at
-                        .format(&time::format_description::well_known::Rfc3339)
-                        .unwrap_or("Wasn't able to format timestamp".to_string()),
-                })
-                .collect();
-
-            (
-                StatusCode::OK,
-                Json(GetChatsResponse {
-                    chats,
-                    next_cursor,
-                    has_more,
-                }),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            tracing::error!(error = ?e, "An error occurred while retrieving messages");
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An error occurred while retrieving messages.",
-            )
-        }
+    .await
+    {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err((status, message)) => error_response(status, &message),
     }
 }
