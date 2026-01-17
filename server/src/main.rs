@@ -11,6 +11,7 @@ use crate::routes::chats::delete_code::delete_code_chat_route;
 use crate::routes::chats::get_chats_route;
 use crate::routes::chats::new_code::new_chat_route;
 use crate::routes::chats::submit_code::submit_code_chat_route;
+use crate::routes::chats::update_chat_message_route;
 use crate::routes::chats::ws::ws_handler;
 use crate::routes::users::me::me_route;
 use crate::routes::users::update::update_route;
@@ -92,7 +93,9 @@ fn create_router(pool: PgPool) -> Router {
         .route("/api/chats/delete-code", delete(delete_code_chat_route))
         .route(
             "/api/chats",
-            get(get_chats_route).delete(delete_chat_message_route),
+            get(get_chats_route)
+                .delete(delete_chat_message_route)
+                .patch(update_chat_message_route),
         )
         .route("/api/chats/submit-code", post(submit_code_chat_route))
         .route("/api/chats/ws", any(ws_handler))
