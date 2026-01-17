@@ -38,12 +38,8 @@ struct ChatRow {
 /// This endpoint:
 /// 1. Extracts the user ID from the authentication cookie
 /// 2. Retrieves messages from a conversation based on query parameters:
-///    - If `all` is true, returns all messages from the conversation (overrides from/to)
-///    - If only `from` is provided, retrieves from that timestamp till the end
-///    - If only `to` is provided, retrieves from the start till that timestamp
-///    - If both `from` and `to` are provided, retrieves messages between them
-///    - If none are provided, retrieves all messages
-/// 3. Returns messages in descending order by sent_at timestamp
+///    - Supports cursor-based pagination using `cursor` and `limit`
+/// 3. Returns messages in descending order by sent_at timestamp and includes pagination metadata
 ///
 /// # Arguments
 ///
@@ -55,7 +51,7 @@ struct ChatRow {
 ///
 /// - `200 OK` with the list of messages on success
 /// - `500 INTERNAL SERVER ERROR` if database operation fails
-#[tracing::instrument(skip(pool, user_id), fields(all = ?query.all, from = ?query.from, to = ?query.to))]
+#[tracing::instrument(skip(pool, user_id), fields(cursor = ?query.cursor, limit = ?query.limit))]
 pub async fn get_chats_route(
     Extension(user_id): Extension<i64>,
     State(pool): State<PgPool>,
@@ -96,54 +92,60 @@ pub async fn get_chats_route(
         _ => {}
     }
 
-    let result = if query.all.unwrap_or(false) {
-        // If all is true, retrieve all messages from the conversation (override from/to)
-        sqlx::query_as!(
-            ChatRow,
-            r#"
-            SELECT messages.content, users.username, messages.sent_at
-            FROM messages
-            JOIN users ON messages.user_sent_id = users.id
-            WHERE messages.conversation_id = $1::UUID
-            ORDER BY messages.sent_at DESC
-            "#,
-            query.conversation_id
-        )
-        .fetch_all(&pool)
-        .await
-    } else {
-        // Parse timestamps if provided
-        let from_timestamp = query.from.as_deref().and_then(|s| {
-            time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339).ok()
-        });
-        let to_timestamp = query.to.as_deref().and_then(|s| {
-            time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339).ok()
-        });
+    const DEFAULT_LIMIT: i64 = 50;
+    const MAX_LIMIT: i64 = 100;
 
-        // Apply from/to filtering
-        sqlx::query_as!(
-            ChatRow,
-            r#"
-            SELECT messages.content, users.username, messages.sent_at
-            FROM messages
-            JOIN users ON messages.user_sent_id = users.id
-            WHERE messages.conversation_id = $1::UUID
-              AND (
-                ($2::TIMESTAMPTZ IS NULL OR messages.sent_at >= $2::TIMESTAMPTZ)
-                AND ($3::TIMESTAMPTZ IS NULL OR messages.sent_at <= $3::TIMESTAMPTZ)
-              )
-            ORDER BY messages.sent_at DESC
-            "#,
-            query.conversation_id,
-            from_timestamp,
-            to_timestamp
-        )
-        .fetch_all(&pool)
-        .await
+    let limit = query
+        .limit
+        .map(|value| value.clamp(1, MAX_LIMIT))
+        .unwrap_or(DEFAULT_LIMIT);
+    let fetch_limit = limit + 1;
+
+    let cursor_timestamp = if let Some(cursor) = query.cursor.as_deref() {
+        match time::OffsetDateTime::parse(cursor, &time::format_description::well_known::Rfc3339) {
+            Ok(ts) => Some(ts),
+            Err(_) => {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "Invalid cursor format. Use RFC3339 timestamp.",
+                );
+            }
+        }
+    } else {
+        None
     };
 
+    let result = sqlx::query_as!(
+        ChatRow,
+        r#"
+        SELECT messages.content, users.username, messages.sent_at
+        FROM messages
+        JOIN users ON messages.user_sent_id = users.id
+        WHERE messages.conversation_id = $1::UUID
+          AND ($2::TIMESTAMPTZ IS NULL OR messages.sent_at < $2::TIMESTAMPTZ)
+        ORDER BY messages.sent_at DESC
+        LIMIT $3
+        "#,
+        query.conversation_id,
+        cursor_timestamp,
+        fetch_limit
+    )
+    .fetch_all(&pool)
+    .await;
+
     match result {
-        Ok(rows) => {
+        Ok(mut rows) => {
+            let has_more = (rows.len() as i64) > limit;
+            if has_more {
+                rows.truncate(limit as usize);
+            }
+
+            let next_cursor = rows.last().and_then(|row| {
+                row.sent_at
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .ok()
+            });
+
             let chats: Vec<ChatItem> = rows
                 .into_iter()
                 .map(|row| ChatItem {
@@ -156,7 +158,15 @@ pub async fn get_chats_route(
                 })
                 .collect();
 
-            (StatusCode::OK, Json(GetChatsResponse { chats })).into_response()
+            (
+                StatusCode::OK,
+                Json(GetChatsResponse {
+                    chats,
+                    next_cursor,
+                    has_more,
+                }),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!(error = ?e, "An error occurred while retrieving messages");

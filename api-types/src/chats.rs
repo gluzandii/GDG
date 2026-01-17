@@ -17,19 +17,16 @@ pub mod ws;
 
 /// Query parameters for retrieving chats.
 ///
-/// All parameters are optional. When `all` is true, returns all messages.
-/// Otherwise, returns messages filtered by the `from` and `to` timestamps.
+/// Supports cursor-based pagination using `cursor` and `limit`.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetChatsQuery {
     /// The conversation ID to retrieve messages from.
     pub conversation_id: Uuid,
-    /// If true, retrieves all messages, overriding from and to filters.
-    pub all: Option<bool>,
-    /// Start timestamp for message filtering (inclusive, RFC3339 format). If omitted, retrieves from the beginning.
-    pub from: Option<String>,
-    /// End timestamp for message filtering (inclusive, RFC3339 format). If omitted, retrieves till the end.
-    pub to: Option<String>,
+    /// Timestamp cursor (RFC3339). Returns messages sent before this cursor when provided.
+    pub cursor: Option<String>,
+    /// Maximum number of messages to return. Defaults to 50 and capped at 100.
+    pub limit: Option<i64>,
 }
 
 /// Response payload for successful chats retrieval.
@@ -40,6 +37,10 @@ pub struct GetChatsQuery {
 pub struct GetChatsResponse {
     /// List of chats belonging to the user.
     pub chats: Vec<ChatItem>,
+    /// Cursor for fetching the next page (older messages). None when there are no more.
+    pub next_cursor: Option<String>,
+    /// Indicates whether another page exists.
+    pub has_more: bool,
 }
 
 /// Represents a single chat message item in the response.
