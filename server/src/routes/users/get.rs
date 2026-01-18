@@ -2,7 +2,7 @@
 //!
 //! Handles fetching the authenticated user's profile information.
 
-use api_types::users::get::UsersMeResponse;
+use api_types::users::get::UsersMeResponseInternal;
 use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use sqlx::PgPool;
 use utils::errors::error_response;
@@ -41,7 +41,7 @@ pub async fn api_users_get(
     State(pool): State<PgPool>,
 ) -> impl IntoResponse {
     let user = match sqlx::query_as!(
-        UsersMeResponse,
+        UsersMeResponseInternal,
         r#"
         SELECT email, username, bio, created_at, updated_at
         FROM users
@@ -64,6 +64,14 @@ pub async fn api_users_get(
                 format!("A database error occurred: {}", e),
             );
         }
+    };
+
+    let user = api_types::users::get::UsersMeResponse {
+        email: user.email,
+        username: user.username,
+        bio: user.bio,
+        created_at: user.created_at.format(&time::format_description::well_known::Rfc3339).unwrap(),
+        updated_at: user.updated_at.format(&time::format_description::well_known::Rfc3339).unwrap(),
     };
 
     (StatusCode::OK, Json(user)).into_response()

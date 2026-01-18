@@ -7,8 +7,7 @@ use time::OffsetDateTime;
 ///
 /// Contains the current user's profile information including
 /// email, username, bio, and timestamps.
-#[derive(Serialize)]
-pub struct UsersMeResponse {
+pub struct UsersMeResponseInternal {
     /// The user's email address.
     pub email: String,
     /// The user's username.
@@ -19,4 +18,18 @@ pub struct UsersMeResponse {
     pub created_at: OffsetDateTime,
     /// Timestamp when the user account was last updated.
     pub updated_at: OffsetDateTime,
+}
+
+#[derive(Serialize)]
+pub struct UsersMeResponse {
+    /// The user's email address.
+    pub email: String,
+    /// The user's username.
+    pub username: String,
+    /// The user's optional biography/description.
+    pub bio: Option<String>,
+    /// Timestamp when the user account was created.
+    pub created_at: String,
+    /// Timestamp when the user account was last updated.
+    pub updated_at: String,
 }

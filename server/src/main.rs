@@ -39,6 +39,22 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
     let addr = format!("127.0.0.1:{}", port);
 
+    if let Err(e) = env::var("DATABASE_URL") {
+        println!(
+            "An error occurred while trying to retrive DATABASE_URL env variable: {}",
+            e
+        );
+        std::process::exit(1);
+    }
+
+    if let Err(e) = env::var("JWT_SECRET_KEY") {
+        println!(
+            "An error occurred while trying to retrive JWT_SECRET_KEY env variable: {}",
+            e
+        );
+        std::process::exit(1);
+    }
+
     let app = create_router(setup_db().await).into_make_service_with_connect_info::<SocketAddr>();
 
     let listener = match tokio::net::TcpListener::bind(&addr).await {
