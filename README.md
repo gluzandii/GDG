@@ -28,6 +28,8 @@ docker compose up
 ```
 Docker Compose will handle PostgreSQL setup and automatically apply all migrations.
 
+(Note: This sometimes takes a lot of time when cargo is downloading the dependencies but it works.)
+
 ### Option 2: Local Development
 
 Use this option if you want to run the server directly on your machine without Docker.
