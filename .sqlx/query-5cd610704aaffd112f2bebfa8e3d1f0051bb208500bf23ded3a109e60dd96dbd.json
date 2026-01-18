@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH user_chat_count AS (\n            SELECT COUNT(*)::INT AS count FROM chat_codes WHERE user_id = $2\n        )\n        INSERT INTO chat_codes (code, user_id)\n        SELECT $1, $2\n        FROM user_chat_count\n        WHERE user_chat_count.count < 5\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5cd610704aaffd112f2bebfa8e3d1f0051bb208500bf23ded3a109e60dd96dbd"
+}

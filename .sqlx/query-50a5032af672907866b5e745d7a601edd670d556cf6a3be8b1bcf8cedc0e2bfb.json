@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO conversations (user_id_1, user_id_2)\n        VALUES (LEAST($1, $2)::BIGINT, GREATEST($1, $2)::BIGINT)\n        ON CONFLICT (user_id_1, user_id_2) DO NOTHING\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "50a5032af672907866b5e745d7a601edd670d556cf6a3be8b1bcf8cedc0e2bfb"
+}

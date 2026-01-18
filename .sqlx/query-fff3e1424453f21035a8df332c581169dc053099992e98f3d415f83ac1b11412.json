@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM messages\n        WHERE id = $1::UUID\n          AND user_sent_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fff3e1424453f21035a8df332c581169dc053099992e98f3d415f83ac1b11412"
+}

@@ -37,7 +37,8 @@ async fn main() {
     }
 
     let port = env::var("PORT").unwrap_or_else(|_| "2607".into());
-    let addr = format!("127.0.0.1:{}", port);
+    let bind_addr = env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0".into());
+    let addr = format!("{}:{}", bind_addr, port);
 
     if let Err(e) = env::var("DATABASE_URL") {
         println!(

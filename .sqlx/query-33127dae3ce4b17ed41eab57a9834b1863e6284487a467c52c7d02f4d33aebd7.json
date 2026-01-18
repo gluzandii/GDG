@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT user_sent_id\n        FROM messages\n        WHERE id = $1::UUID\n          AND conversation_id = $2::UUID\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_sent_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "33127dae3ce4b17ed41eab57a9834b1863e6284487a467c52c7d02f4d33aebd7"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE messages\n        SET content = $1, edited_at = CURRENT_TIMESTAMP\n        WHERE id = $2::UUID\n          AND user_sent_id = $3\n        RETURNING edited_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "edited_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6def18310688123c63125179025ae4af251f25cff50e0c10d058ad3f41230aa6"
+}

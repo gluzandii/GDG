@@ -7,10 +7,57 @@ Defaults to 2607 is not specified.
 
 PostgreSQL connection string used by the backend.
 
-### `JWT_SECRET`
+### `JWT_SECRET_KEY`
 
 Secret key used to sign and verify JSON Web Tokens.
 This value must be kept private and secure.
+
+---
+
+## Building and Running
+
+### Option 1: Docker (Recommended)
+
+The easiest way to get started is using Docker Compose.
+
+**Requirements**: Docker and Docker Compose
+
+**Steps**:
+```bash
+docker compose up 
+```
+Docker Compose will handle PostgreSQL setup and automatically apply all migrations.
+
+### Option 2: Local Development
+
+Use this option if you want to run the server directly on your machine without Docker.
+
+**Requirements**:
+- Rust 1.92 or later
+- A running PostgreSQL instance (local or remote)
+
+**Steps**:
+
+1. **Set required environment variables**:
+   ```bash
+   export DATABASE_URL="postgresql://user:password@host:5432/database"
+   export JWT_SECRET_KEY="your-secret-key-here-change-in-production"
+   export PORT=8080
+   export BIND_ADDR=0.0.0.0
+   ```
+
+2. **Ensure database schema is set up**:
+   - Run all SQL files inside the `migrations/` directory **in order** against your database  
+     **OR**
+   - Ensure the database already contains all required tables, indexes, and constraints defined in those migration files.
+
+3. **Build and run the server**:
+   ```bash
+   cargo build --release
+   ./target/release/server
+   ```
+
+The server will start on `http://localhost:8080` (or the configured `BIND_ADDR` and `PORT`).
 
 ---
 
