@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = { version = "0.8", features = ["ws"] }
+axum = { workspace = true }
 dotenvy = "0.15"
 rand = "0.8"
 sqlx = { version = "0.8", features = [
@@ -15,15 +15,14 @@ sqlx = { version = "0.8", features = [
     "uuid",
 ] }
 tokio = { version = "1.49", features = ["full"] }
-api-types = { path = "../api-types" }
-utils = { path = "../utils" }
-middleware = { path = "../middleware" }
-tracing = { version = "0.1", features = ["attributes"] }
+api-types = { workspace = true }
+utils = { workspace = true }
+middleware = { workspace = true }
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
-axum-extra = { version = "0.12", features = ["cookie"] }
-uuid = "1.19"
 futures-util = "0.3"
-serde = { version = "1.0", features = ["derive"] }
+uuid = { workspace = true }
+serde = { workspace = true }
 serde_json = "1.0"
-time = "0.3.45"
+time = { workspace = true }
 tower_governor = { version = "0.8", default-features = false, features = ["axum", "tracing"] }

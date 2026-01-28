@@ -1,3 +1,13 @@
 [workspace]
 members = ["server", "api-types", "utils", "middleware"]
 resolver = "3"
+
+[workspace.dependencies]
+uuid = { version = "1.19", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+time = { version = "0.3.45", features = ["serde"] }
+tracing = { version = "0.1", features = ["attributes"] }
+axum = { version = "0.8", features = ["ws"] }
+utils = { path = "utils" }
+api-types = { path = "api-types" }
+middleware = { path = "middleware" }

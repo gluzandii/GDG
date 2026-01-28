@@ -1726,7 +1726,6 @@ version = "0.1.0"
 dependencies = [
  "api-types",
  "axum",
- "axum-extra",
  "dotenvy",
  "futures-util",
  "middleware",
